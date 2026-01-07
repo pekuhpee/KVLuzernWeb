@@ -59,6 +59,7 @@ INSTALLED_APPS = [
     "apps.charts", 
     "apps.tasks",
     "apps.cli",
+    "apps.exams",
 
     "django_celery_results",
 
