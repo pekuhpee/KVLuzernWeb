@@ -1,17 +1,17 @@
-{% extends "layouts/base.html" %}
+{% extends "layouts/public_base.html" %}
 
 {% block content %}
-  <div class="px-4 pt-6">
-    <div class="rounded-lg border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-      <h1 class="mb-2 text-2xl font-semibold text-gray-900 dark:text-white">Danke!</h1>
-      <p class="text-sm text-gray-600 dark:text-gray-300">
+  <section class="kv-stack">
+    <div class="kv-card">
+      <h1 class="kv-title">Danke!</h1>
+      <p class="kv-subtitle">
         Danke! Dein Upload wurde eingereicht und wird zuerst geprüft.
       </p>
-      <div class="mt-4">
-        <a href="{% url 'pruefungen' %}" class="inline-flex items-center rounded bg-gray-900 px-4 py-2 text-sm font-semibold text-white hover:bg-gray-800 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white">
+      <div style="margin-top: 24px;">
+        <a href="{% url 'pruefungen' %}" class="kv-btn kv-btn-primary">
           Zurück zu Prüfungen
         </a>
       </div>
     </div>
-  </div>
+  </section>
 {% endblock content %}

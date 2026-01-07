@@ -1,0 +1,34 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  {% include "includes/head.html" %}
+  <link rel="stylesheet" href="{% static 'assets/public.css' %}">
+  {% block extrastyle %}{% endblock extrastyle %}
+</head>
+<body class="kv-body">
+  {% block messages %}{% endblock messages %}
+
+  <header class="kv-header">
+    <div class="kv-container kv-nav">
+      <a class="kv-brand" href="{% url 'pruefungen' %}">KV Luzern Survival</a>
+      <nav class="kv-nav-links" aria-label="Hauptnavigation">
+        <a class="kv-link" href="{% url 'pruefungen' %}">Prüfungen</a>
+        <a class="kv-link" href="/memes">Memes</a>
+        <a class="kv-link" href="/ranking">Ranking</a>
+      </nav>
+      <a class="kv-btn kv-btn-primary" href="{% url 'exams:upload' %}">Hochladen</a>
+    </div>
+  </header>
+
+  <main class="kv-main">
+    <div class="kv-container">
+      {% block content %}{% endblock content %}
+    </div>
+  </main>
+
+  {% include "includes/scripts.html" %}
+  {% block extra_js %}{% endblock extra_js %}
+</body>
+</html>

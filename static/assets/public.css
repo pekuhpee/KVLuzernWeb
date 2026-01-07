@@ -1,0 +1,35 @@
+:root { --kv-primary: #0F3D32; --kv-primary-dark: #0c332a; --kv-accent: #C6A15B; --kv-text: #1f2933; --kv-muted: #6b7280; --kv-border: #e5e7eb; --kv-bg: #ffffff; }
+body.kv-body { margin: 0; font-family: Bahnschrift, "Segoe UI", "Helvetica Neue", Arial, sans-serif; color: var(--kv-text); background: var(--kv-bg); }
+.kv-container { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+.kv-header { background: var(--kv-bg); border-bottom: 1px solid var(--kv-border); }
+.kv-nav { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 20px 0; flex-wrap: wrap; }
+.kv-brand { font-size: 1.125rem; font-weight: 700; letter-spacing: 0.02em; text-decoration: none; color: var(--kv-primary); }
+.kv-nav-links { display: flex; gap: 20px; flex-wrap: wrap; align-items: center; }
+.kv-link { text-decoration: none; font-weight: 600; color: var(--kv-text); }
+.kv-link:hover, .kv-link:focus { color: var(--kv-primary); }
+.kv-main { padding: 32px 0 64px; }
+.kv-btn { display: inline-flex; align-items: center; justify-content: center; padding: 10px 18px; font-size: 0.95rem; font-weight: 600; border-radius: 6px; border: 1px solid transparent; text-decoration: none; transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease; }
+.kv-btn-primary { background: var(--kv-primary); color: #ffffff; border-color: var(--kv-primary); }
+.kv-btn-primary:hover, .kv-btn-primary:focus { background: var(--kv-primary-dark); border-color: var(--kv-primary-dark); }
+.kv-btn-secondary { background: transparent; color: var(--kv-primary); border-color: var(--kv-primary); }
+.kv-btn-secondary:hover, .kv-btn-secondary:focus { color: #ffffff; background: var(--kv-primary); }
+.kv-stack { display: flex; flex-direction: column; gap: 24px; }
+.kv-page-header { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; }
+.kv-title { font-size: 2rem; font-weight: 700; margin: 0 0 6px; color: var(--kv-text); }
+.kv-subtitle { margin: 0; color: var(--kv-muted); font-size: 0.95rem; }
+.kv-card { border: 1px solid var(--kv-border); background: var(--kv-bg); padding: 24px; }
+.kv-grid { display: grid; grid-template-columns: repeat(1, minmax(0, 1fr)); gap: 16px; }
+@media (min-width: 768px) { .kv-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 1024px) { .kv-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+.kv-field label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 6px; color: var(--kv-text); }
+.kv-form input, .kv-form select, .kv-form textarea { width: 100%; border: 1px solid var(--kv-border); padding: 10px 12px; background: var(--kv-bg); font-size: 0.9rem; color: var(--kv-text); }
+.kv-form input:focus, .kv-form select:focus, .kv-form textarea:focus { outline: none; border-color: var(--kv-accent); box-shadow: 0 0 0 2px rgba(198, 161, 91, 0.2); }
+.kv-table-wrapper { overflow-x: auto; }
+.kv-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.kv-table th, .kv-table td { padding: 14px 12px; border-bottom: 1px solid var(--kv-border); text-align: left; }
+.kv-table th { font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--kv-muted); }
+.kv-table td:last-child, .kv-table th:last-child { text-align: right; }
+.kv-link-action { font-weight: 600; color: var(--kv-primary); text-decoration: none; }
+.kv-link-action:hover, .kv-link-action:focus { color: var(--kv-primary-dark); }
+.kv-muted { color: var(--kv-muted); }
+.kv-note { margin-top: 6px; font-size: 0.75rem; color: var(--kv-muted); }
