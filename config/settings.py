@@ -58,6 +58,7 @@ INSTALLED_APPS = [
     "apps.users",
     "apps.charts", 
     "apps.tasks",
+    "apps.cli",
 
     "django_celery_results",
 
