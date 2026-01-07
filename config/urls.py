@@ -26,6 +26,7 @@ urlpatterns = [
     path("", include("apps.pages.urls")),
     path("", include("apps.dyn_dt.urls")),
     path("", include("apps.dyn_api.urls")),
+    path("", include("apps.exams.urls")),
     path("admin/", admin.site.urls),
     path("users/", include("apps.users.urls")),
     path("charts/", include("apps.charts.urls")),
