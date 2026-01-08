@@ -33,17 +33,15 @@ class Meme(models.Model):
 
 class MemeLike(models.Model):
     meme = models.ForeignKey(Meme, related_name="likes", on_delete=models.CASCADE)
-    visitor_id = models.UUIDField()
-    ip_hash = models.CharField(max_length=64, blank=True)
-    ua_hash = models.CharField(max_length=64, blank=True)
+    anon_id = models.UUIDField()
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=["meme", "visitor_id"], name="unique_meme_like_per_visitor"
+                fields=["meme", "anon_id"], name="unique_meme_like_per_anon"
             )
         ]
 
     def __str__(self):
-        return f"MemeLike {self.meme_id} by {self.visitor_id}"
+        return f"MemeLike {self.meme_id} by {self.anon_id}"

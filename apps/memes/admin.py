@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.utils import timezone
 from django.utils.html import format_html
 
-from apps.memes.models import Meme
+from apps.memes.models import Meme, MemeLike
 
 
 @admin.register(Meme)
@@ -41,3 +41,10 @@ class MemeAdmin(admin.ModelAdmin):
     @admin.action(description="Reject selected")
     def reject_selected(self, request, queryset):
         queryset.update(status=Meme.Status.REJECTED)
+
+
+@admin.register(MemeLike)
+class MemeLikeAdmin(admin.ModelAdmin):
+    list_display = ("id", "meme", "anon_id", "created_at")
+    list_filter = ("created_at",)
+    search_fields = ("anon_id",)
