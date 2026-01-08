@@ -50,6 +50,11 @@ A common set of features is provided out-of-the-box: **API, DataTables, Charts, 
 
 <br /> 
 
+### Required environment variables
+
+- `DATABASE_URL` (Render Postgres connection string)
+- `SECRET_KEY` (stable value for consistent sessions)
+
 ## [Rocket PRO Version](https://app-generator.dev/product/rocket-pro/django/)
 
 > The premium version provides more features, priority on support, and is more often updated - [Live Demo](https://rocket-django-pro.onrender.com/).
