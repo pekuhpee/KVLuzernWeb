@@ -35,6 +35,7 @@ class ContentItemUploadForm(forms.ModelForm):
                 field.widget.attrs["class"] = file_class
             else:
                 field.widget.attrs["class"] = input_class
+        self.fields["file"].help_text = "PDF, PNG oder JPG. Maximal 25 MB."
 
     def clean_file(self):
         file = self.cleaned_data.get("file")
@@ -42,10 +43,17 @@ class ContentItemUploadForm(forms.ModelForm):
             return file
 
         allowed_extensions = {"pdf", "png", "jpg", "jpeg"}
+        allowed_content_types = {"application/pdf", "image/png", "image/jpeg"}
         extension = file.name.rsplit(".", 1)[-1].lower() if "." in file.name else ""
         if extension not in allowed_extensions:
             raise forms.ValidationError(
                 "Nur PDF, PNG oder JPG-Dateien sind erlaubt."
+            )
+
+        content_type = getattr(file, "content_type", "")
+        if content_type and content_type not in allowed_content_types:
+            raise forms.ValidationError(
+                "Der Dateityp stimmt nicht mit PDF, PNG oder JPG überein."
             )
 
         max_size_mb = 25

@@ -18,6 +18,7 @@ class MemeUploadForm(forms.ModelForm):
                 )
             }
         )
+        self.fields["image"].help_text = "PNG, JPG oder WEBP. Maximal 10 MB."
 
     def clean_image(self):
         image = self.cleaned_data.get("image")
@@ -25,10 +26,17 @@ class MemeUploadForm(forms.ModelForm):
             return image
 
         allowed_extensions = {"png", "jpg", "jpeg", "webp"}
+        allowed_content_types = {"image/png", "image/jpeg", "image/webp"}
         extension = image.name.rsplit(".", 1)[-1].lower() if "." in image.name else ""
         if extension not in allowed_extensions:
             raise forms.ValidationError(
                 "Nur PNG, JPG, JPEG oder WEBP-Dateien sind erlaubt."
+            )
+
+        content_type = getattr(image, "content_type", "")
+        if content_type and content_type not in allowed_content_types:
+            raise forms.ValidationError(
+                "Der Dateityp stimmt nicht mit PNG, JPG oder WEBP überein."
             )
 
         max_size_mb = 10

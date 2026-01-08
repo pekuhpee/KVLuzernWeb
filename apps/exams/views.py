@@ -42,8 +42,13 @@ def download(request, pk):
 
     ContentItem.objects.filter(pk=pk).update(download_count=F("download_count") + 1)
 
+    try:
+        file_handle = content_item.file.open("rb")
+    except (FileNotFoundError, OSError):
+        raise Http404("File not found.")
+
     return FileResponse(
-        content_item.file.open("rb"),
+        file_handle,
         as_attachment=True,
         filename=os.path.basename(content_item.file.name),
     )

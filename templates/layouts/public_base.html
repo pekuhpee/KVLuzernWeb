@@ -14,9 +14,9 @@
     <div class="kv-container kv-nav">
       <a class="kv-brand" href="{% url 'pruefungen' %}">KV Luzern Survival</a>
       <nav class="kv-nav-links" aria-label="Hauptnavigation">
-        <a class="kv-link" href="{% url 'pruefungen' %}">Prüfungen</a>
-        <a class="kv-link" href="/memes">Memes</a>
-        <a class="kv-link" href="/ranking">Ranking</a>
+        <a class="kv-link{% if request.resolver_match.url_name == 'pruefungen' %} is-active{% endif %}" href="{% url 'pruefungen' %}">Prüfungen</a>
+        <a class="kv-link{% if request.resolver_match.app_name == 'memes' %} is-active{% endif %}" href="{% url 'memes:index' %}">Memes</a>
+        <a class="kv-link{% if request.resolver_match.app_name == 'ranking' %} is-active{% endif %}" href="{% url 'ranking:start' %}">Ranking</a>
       </nav>
       <a class="kv-btn kv-btn-primary" href="{% url 'exams:upload' %}">Hochladen</a>
     </div>

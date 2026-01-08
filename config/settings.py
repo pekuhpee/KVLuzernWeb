@@ -28,12 +28,17 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get('SECRET_KEY', 'Super_Secr3t_9999')
 
 # Enable/Disable DEBUG Mode
-DEBUG = str2bool(os.environ.get('DEBUG'))
+DEBUG = str2bool(os.environ.get("DEBUG", "false"))
 #print(' DEBUG -> ' + str(DEBUG) ) 
 
 # Hosts Settings
-ALLOWED_HOSTS = ['*']
-CSRF_TRUSTED_ORIGINS = ['http://localhost:8000', 'http://localhost:5085', 'http://127.0.0.1:8000', 'http://127.0.0.1:5085', 'https://rocket-django.onrender.com']
+def _split_env_list(value):
+    return [item.strip() for item in value.split(",") if item.strip()]
+
+ALLOWED_HOSTS = _split_env_list(os.environ.get("ALLOWED_HOSTS", "localhost,127.0.0.1"))
+CSRF_TRUSTED_ORIGINS = _split_env_list(
+    os.environ.get("CSRF_TRUSTED_ORIGINS", "http://localhost:8000,http://127.0.0.1:8000")
+)
 
 # Used by DEBUG-Toolbar 
 INTERNAL_IPS = [
@@ -84,6 +89,10 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "debug_toolbar.middleware.DebugToolbarMiddleware",
 ]
+
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+SESSION_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SECURE = not DEBUG
 
 ROOT_URLCONF = "config.urls"
 

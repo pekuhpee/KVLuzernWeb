@@ -1,0 +1,16 @@
+{% extends "layouts/public_base.html" %}
+
+{% block content %}
+  <section class="kv-stack">
+    <div>
+      <h1 class="kv-title">Etwas ist schiefgelaufen</h1>
+      <p class="kv-subtitle">Der Server konnte die Anfrage nicht verarbeiten.</p>
+    </div>
+    <div class="kv-card">
+      <p class="kv-muted">Bitte versuche es später erneut.</p>
+      <div class="kv-page-header" style="justify-content: flex-start; gap: 12px; margin-top: 16px;">
+        <a class="kv-btn kv-btn-primary" href="{% url 'pruefungen' %}">Zur Startseite</a>
+      </div>
+    </div>
+  </section>
+{% endblock content %}

@@ -27,6 +27,9 @@
               {% endif %}
             </label>
             {{ field }}
+            {% if field.help_text %}
+              <p class="kv-note">{{ field.help_text }}</p>
+            {% endif %}
             {% if field.errors %}
               <p class="kv-note" style="color: #b91c1c;">{{ field.errors|striptags }}</p>
             {% endif %}
