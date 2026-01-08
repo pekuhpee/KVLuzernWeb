@@ -51,3 +51,32 @@ class ContentItem(models.Model):
 
     def __str__(self) -> str:
         return self.title
+
+
+class UploadBatch(models.Model):
+    owner = models.ForeignKey(
+        "users.User",
+        on_delete=models.CASCADE,
+        related_name="upload_batches",
+    )
+    context = models.CharField(max_length=200, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self) -> str:
+        return f"Batch {self.pk} ({self.owner})"
+
+
+class UploadFile(models.Model):
+    batch = models.ForeignKey(
+        UploadBatch,
+        on_delete=models.CASCADE,
+        related_name="files",
+    )
+    file = models.FileField(upload_to="uploads/")
+    original_name = models.CharField(max_length=255)
+    size = models.PositiveIntegerField()
+    mime = models.CharField(max_length=120)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self) -> str:
+        return f"{self.original_name} ({self.batch_id})"

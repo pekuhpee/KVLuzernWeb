@@ -9,6 +9,7 @@ django-debug-toolbar==4.2.0
 Pillow==11.1.0
 django-storages==1.14.6
 boto3==1.34.162
+zipstream-ng==1.7.1
 
 # Services
 celery==5.3.4
