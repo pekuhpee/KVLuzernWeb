@@ -1,0 +1,16 @@
+{% extends "layouts/public_base.html" %}
+
+{% block content %}
+  <section class="kv-stack">
+    <div>
+      <h1 class="kv-title">Zugriff verweigert</h1>
+      <p class="kv-subtitle">Du hast keine Berechtigung für diese Aktion.</p>
+    </div>
+    <div class="kv-card">
+      <p class="kv-muted">Bitte nutze die öffentlichen Bereiche.</p>
+      <div class="kv-page-header" style="justify-content: flex-start; gap: 12px; margin-top: 16px;">
+        <a class="kv-btn kv-btn-primary" href="{% url 'pruefungen' %}">Zu den Prüfungen</a>
+      </div>
+    </div>
+  </section>
+{% endblock content %}

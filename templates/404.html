@@ -1,0 +1,17 @@
+{% extends "layouts/public_base.html" %}
+
+{% block content %}
+  <section class="kv-stack">
+    <div>
+      <h1 class="kv-title">Seite nicht gefunden</h1>
+      <p class="kv-subtitle">Die gewünschte Seite wurde nicht gefunden.</p>
+    </div>
+    <div class="kv-card">
+      <p class="kv-muted">Zurück zu den Prüfungen oder zum Meme-Archiv.</p>
+      <div class="kv-page-header" style="justify-content: flex-start; gap: 12px; margin-top: 16px;">
+        <a class="kv-btn kv-btn-primary" href="{% url 'pruefungen' %}">Zu den Prüfungen</a>
+        <a class="kv-btn kv-btn-secondary" href="{% url 'memes:index' %}">Zu den Memes</a>
+      </div>
+    </div>
+  </section>
+{% endblock content %}

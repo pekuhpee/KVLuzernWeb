@@ -17,7 +17,7 @@
     <a class="kv-btn kv-btn-secondary" href="{% url 'ranking:start' %}">Zurück zum Voting</a>
   </div>
   {% if not category_results %}
-    <div class="kv-card"><p class="kv-muted">Noch keine Kategorien oder Lehrpersonen vorhanden. Bitte später wiederkommen.</p></div>
+    <div class="kv-card"><p class="kv-muted">Noch keine Kategorien oder Lehrpersonen angelegt.</p></div>
   {% else %}
     {% for result in category_results %}
       <section class="kv-card kv-stack">
