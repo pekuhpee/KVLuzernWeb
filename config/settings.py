@@ -61,6 +61,7 @@ INSTALLED_APPS = [
     "apps.cli",
     "apps.exams",
     "apps.memes",
+    "apps.ranking",
 
     "django_celery_results",
 

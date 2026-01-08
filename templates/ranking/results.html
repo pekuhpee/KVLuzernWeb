@@ -1,0 +1,42 @@
+{% extends "layouts/public_base.html" %}
+{% block extrastyle %}
+<style>
+  .kv-bar-row { display: grid; grid-template-columns: minmax(120px, 180px) 1fr 48px; gap: 12px; align-items: center; }
+  .kv-bar-track { background: #f3f4f6; border-radius: 999px; height: 12px; overflow: hidden; }
+  .kv-bar-fill { background: var(--kv-accent); height: 100%; }
+  .kv-bar-count { font-weight: 600; text-align: right; }
+  .kv-bar-label { font-weight: 600; }
+</style>
+{% endblock extrastyle %}
+{% block content %}
+<div class="kv-stack">
+  <div class="kv-page-header">
+    <div>
+      <h1 class="kv-title">Ranking-Ergebnisse</h1><p class="kv-subtitle">Aktueller Zwischenstand je Kategorie.</p>
+    </div>
+    <a class="kv-btn kv-btn-secondary" href="{% url 'ranking:start' %}">Zurück zum Voting</a>
+  </div>
+  {% if not category_results %}
+    <div class="kv-card"><p class="kv-muted">Noch keine Kategorien oder Lehrpersonen vorhanden. Bitte später wiederkommen.</p></div>
+  {% else %}
+    {% for result in category_results %}
+      <section class="kv-card kv-stack">
+        <div>
+          <h2 class="kv-title">{{ result.category.title }}</h2>
+          {% if result.category.description %}<p class="kv-subtitle">{{ result.category.description }}</p>{% endif %}
+          <p class="kv-muted">Total Stimmen: {{ result.total_votes }}</p>
+        </div>
+        <div class="kv-stack">
+          {% for row in result.rows %}
+            <div class="kv-bar-row">
+              <div class="kv-bar-label">{{ row.teacher.name }}</div>
+              <div class="kv-bar-track"><div class="kv-bar-fill" style="width: {{ row.percent|floatformat:0 }}%"></div></div>
+              <div class="kv-bar-count">{{ row.count }}</div>
+            </div>
+          {% endfor %}
+        </div>
+      </section>
+    {% endfor %}
+  {% endif %}
+</div>
+{% endblock content %}
