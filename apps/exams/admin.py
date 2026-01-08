@@ -34,6 +34,7 @@ class ContentItemAdmin(admin.ModelAdmin):
         "teacher",
         "year",
         "program",
+        "created_at",
     )
     search_fields = ("title", "subject", "teacher")
     actions = (approve_selected, reject_selected)
