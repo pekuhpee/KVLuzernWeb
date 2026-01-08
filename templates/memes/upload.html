@@ -1,0 +1,43 @@
+{% extends "layouts/public_base.html" %}
+
+{% block content %}
+  <section class="kv-stack">
+    <div>
+      <h1 class="kv-title">Meme hochladen</h1>
+      <p class="kv-subtitle">
+        Lade dein Meme hoch. Es wird zuerst geprüft.
+      </p>
+    </div>
+
+    <div class="kv-card">
+      <form method="post" enctype="multipart/form-data" class="kv-form kv-stack">
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+          <div class="kv-card" style="border-color: #fca5a5; background: #fef2f2;">
+            <p style="margin: 0; color: #b91c1c; font-size: 0.9rem;">{{ form.non_field_errors }}</p>
+          </div>
+        {% endif %}
+
+        {% for field in form %}
+          <div class="kv-field">
+            <label for="{{ field.id_for_label }}">
+              {{ field.label }}
+              {% if not field.field.required %}
+                <span class="kv-note">(optional)</span>
+              {% endif %}
+            </label>
+            {{ field }}
+            {% if field.errors %}
+              <p class="kv-note" style="color: #b91c1c;">{{ field.errors|striptags }}</p>
+            {% endif %}
+          </div>
+        {% endfor %}
+
+        <div class="kv-page-header" style="justify-content: flex-start;">
+          <button type="submit" class="kv-btn kv-btn-primary">Upload senden</button>
+          <a href="{% url 'memes:index' %}" class="kv-btn kv-btn-secondary">Zurück zu Memes</a>
+        </div>
+      </form>
+    </div>
+  </section>
+{% endblock content %}

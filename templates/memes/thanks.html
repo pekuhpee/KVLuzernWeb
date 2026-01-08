@@ -1,0 +1,15 @@
+{% extends "layouts/public_base.html" %}
+
+{% block content %}
+  <section class="kv-stack">
+    <div class="kv-card">
+      <h1 class="kv-title">Danke!</h1>
+      <p class="kv-subtitle">Danke! Wird zuerst geprüft.</p>
+      <div style="margin-top: 24px;">
+        <a href="{% url 'memes:index' %}" class="kv-btn kv-btn-primary">
+          Zurück zu Memes
+        </a>
+      </div>
+    </div>
+  </section>
+{% endblock content %}
