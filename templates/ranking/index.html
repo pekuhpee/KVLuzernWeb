@@ -1,0 +1,42 @@
+{% extends "layouts/public_base.html" %}
+{% block content %}
+<div class="kv-stack">
+  <div class="kv-page-header">
+    <div>
+      <h1 class="kv-title">Lehrpersonen-Ranking</h1><p class="kv-subtitle">Stimme pro Kategorie einmal ab.</p>
+    </div>
+    <a class="kv-btn kv-btn-secondary" href="{% url 'ranking:results' %}">Ergebnisse</a>
+  </div>
+  {% if not category %}
+    <div class="kv-card"><p class="kv-muted">Noch keine Kategorien oder Lehrpersonen vorhanden. Bitte später wiederkommen.</p></div>
+  {% elif already_voted %}
+    <div class="kv-card kv-stack">
+      <div>
+        <h2 class="kv-title">{{ category.title }}</h2>
+        <p class="kv-subtitle">Du hast in dieser Kategorie bereits abgestimmt.</p>
+      </div>
+      {% if next_category %}
+        <a class="kv-btn kv-btn-primary" href="{% url 'ranking:start' %}">Weiter zur nächsten Kategorie</a>
+      {% else %}
+        <a class="kv-btn kv-btn-primary" href="{% url 'ranking:results' %}">Zu den Ergebnissen</a>
+      {% endif %}
+    </div>
+  {% else %}
+    <div class="kv-card kv-stack">
+      <div>
+        <h2 class="kv-title">{{ category.title }}</h2>
+        {% if category.description %}<p class="kv-subtitle">{{ category.description }}</p>{% endif %}
+      </div>
+      {% if teachers %}
+        <form method="post" action="{% url 'ranking:vote' %}" class="kv-grid">
+          {% csrf_token %}
+          <input type="hidden" name="category_id" value="{{ category.id }}">
+          {% for teacher in teachers %}<button class="kv-btn kv-btn-primary" type="submit" name="teacher_id" value="{{ teacher.id }}">{{ teacher.name }}</button>{% endfor %}
+        </form>
+      {% else %}
+        <p class="kv-muted">Keine aktiven Lehrpersonen verfügbar.</p>
+      {% endif %}
+    </div>
+  {% endif %}
+</div>
+{% endblock content %}
