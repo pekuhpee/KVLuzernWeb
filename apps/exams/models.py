@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 
 
@@ -55,7 +56,7 @@ class ContentItem(models.Model):
 
 class UploadBatch(models.Model):
     owner = models.ForeignKey(
-        "users.User",
+        settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="upload_batches",
     )
