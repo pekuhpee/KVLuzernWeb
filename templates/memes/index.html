@@ -14,9 +14,33 @@
     <div id="meme-grid" class="meme-grid" aria-live="polite">
       {% if memes %}
         {% for meme in memes %}
-          <div class="meme-card">
-            <img src="{{ meme.image.url }}" alt="Meme {{ meme.id }}">
-          </div>
+          <article
+            class="meme-card"
+            data-meme-id="{{ meme.id }}"
+            data-meme-title="{{ meme.title|default_if_none:'' }}"
+            data-meme-image="{{ meme.image.url }}"
+            data-like-count="{{ meme.like_count }}"
+            data-liked="{% if meme.id in liked_ids %}true{% else %}false{% endif %}"
+          >
+            <button class="meme-card__button" type="button" data-meme-open>
+              <img class="meme-card__image" src="{{ meme.image.url }}" alt="{{ meme.title|default:'Meme' }}">
+            </button>
+            <div class="meme-card__body">
+              <button class="meme-card__title-button" type="button" data-meme-open>
+                {% if meme.title %}
+                  {{ meme.title }}
+                {% else %}
+                  Meme #{{ meme.id }}
+                {% endif %}
+              </button>
+              <div class="meme-like">
+                <button class="meme-like__button" type="button" {% if meme.id in liked_ids %}disabled{% endif %}>
+                  {% if meme.id in liked_ids %}❤️ Geliked{% else %}🤍 Like{% endif %}
+                </button>
+                <span class="meme-like__count">{{ meme.like_count }} Likes</span>
+              </div>
+            </div>
+          </article>
         {% endfor %}
       {% else %}
         <div class="kv-card">
@@ -31,6 +55,12 @@
     <div class="meme-modal__content" role="dialog" aria-modal="true">
       <button class="meme-modal__close" type="button" aria-label="Schliessen" data-modal-close>
         ×
+      </button>
+      <button class="meme-modal__nav meme-modal__nav--prev" type="button" aria-label="Vorheriges Meme" data-modal-prev>
+        ‹
+      </button>
+      <button class="meme-modal__nav meme-modal__nav--next" type="button" aria-label="Nächstes Meme" data-modal-next>
+        ›
       </button>
       <img id="meme-modal-image" src="" alt="">
       <div class="meme-modal__footer">

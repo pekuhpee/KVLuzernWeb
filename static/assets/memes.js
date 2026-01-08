@@ -1,20 +1,82 @@
 (() => {
   const grid = document.getElementById("meme-grid");
   if (!grid) return;
-  const modal = document.getElementById("meme-modal"), modalImage = document.getElementById("meme-modal-image"), modalTitle = document.getElementById("meme-modal-title"), modalLikeButton = document.getElementById("meme-modal-like"), modalCount = document.getElementById("meme-modal-count"), closeTriggers = modal ? modal.querySelectorAll("[data-modal-close]") : [], storageKey = "kv_meme_visitor_id", oneYearMs = 365 * 24 * 60 * 60 * 1000, state = { memes: [], selectedId: null };
-  const createUuid = () => window.crypto?.randomUUID ? window.crypto.randomUUID() : "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => { const r = (Math.random() * 16) | 0; const v = c === "x" ? r : (r & 0x3) | 0x8; return v.toString(16); });
-  const loadVisitorId = () => { try { const raw = localStorage.getItem(storageKey); if (raw) { const parsed = JSON.parse(raw); if (parsed?.id && parsed?.expires > Date.now()) return parsed.id; } } catch (error) { localStorage.removeItem(storageKey); } const newId = createUuid(); localStorage.setItem(storageKey, JSON.stringify({ id: newId, expires: Date.now() + oneYearMs })); return newId; };
-  const visitorId = loadVisitorId();
+  const modal = document.getElementById("meme-modal"), modalImage = document.getElementById("meme-modal-image"), modalTitle = document.getElementById("meme-modal-title"), modalLikeButton = document.getElementById("meme-modal-like"), modalCount = document.getElementById("meme-modal-count"), closeTriggers = modal ? modal.querySelectorAll("[data-modal-close]") : [], prevTrigger = modal ? modal.querySelector("[data-modal-prev]") : null, nextTrigger = modal ? modal.querySelector("[data-modal-next]") : null, state = { memes: [], selectedIndex: null };
   const likeLabel = (liked) => (liked ? "❤️ Geliked" : "🤍 Like");
-  const setLikeButton = (button, meme) => { button.textContent = likeLabel(meme.liked_by_me); button.disabled = meme.liked_by_me; };
-  const renderGrid = () => { if (!state.memes.length) { grid.innerHTML = "<div class=\"kv-card\"><p class=\"kv-subtitle\">Noch keine Memes freigegeben.</p></div>"; return; } grid.innerHTML = ""; state.memes.forEach((meme) => { const card = document.createElement("article"); card.className = "meme-card"; const button = document.createElement("button"); button.type = "button"; button.className = "meme-card__button"; button.addEventListener("click", () => openModal(meme.id)); const img = document.createElement("img"); img.src = meme.image_url; img.alt = meme.title || `Meme ${meme.id}`; button.appendChild(img); const body = document.createElement("div"); body.className = "meme-card__body"; const title = document.createElement("p"); title.className = "meme-card__title"; title.textContent = meme.title || "Meme"; const likeWrap = document.createElement("div"); likeWrap.className = "meme-like"; const likeButton = document.createElement("button"); likeButton.type = "button"; likeButton.className = "meme-like__button"; setLikeButton(likeButton, meme); likeButton.addEventListener("click", (event) => { event.stopPropagation(); handleLike(meme.id); }); const likeCount = document.createElement("span"); likeCount.className = "meme-like__count"; likeCount.textContent = `${meme.like_count} Likes`; likeWrap.append(likeButton, likeCount); body.append(title, likeWrap); card.append(button, body); grid.appendChild(card); }); };
-  const openModal = (memeId) => { const meme = state.memes.find((item) => item.id === memeId); if (!meme || !modal) return; state.selectedId = memeId; modalImage.src = meme.image_url; modalImage.alt = meme.title || `Meme ${meme.id}`; modalTitle.textContent = meme.title || "Meme"; modalCount.textContent = `${meme.like_count} Likes`; setLikeButton(modalLikeButton, meme); modal.classList.add("is-open"); modal.setAttribute("aria-hidden", "false"); };
-  const closeModal = () => { if (!modal) return; modal.classList.remove("is-open"); modal.setAttribute("aria-hidden", "true"); state.selectedId = null; };
-  const syncLikeCounts = (meme) => { renderGrid(); if (state.selectedId === meme.id) { modalCount.textContent = `${meme.like_count} Likes`; setLikeButton(modalLikeButton, meme); } };
-  const handleLike = async (memeId) => { const meme = state.memes.find((item) => item.id === memeId); if (!meme || meme.liked_by_me) return; try { const response = await fetch(`/api/memes/${memeId}/like/`, { method: "POST", headers: { "X-Visitor-Id": visitorId } }); if (!response.ok) return; const data = await response.json(); meme.like_count = data.like_count ?? meme.like_count; meme.liked_by_me = true; syncLikeCounts(meme); } catch (error) { console.error(error); } };
-  const loadMemes = async () => { try { const response = await fetch("/api/memes/", { headers: { "X-Visitor-Id": visitorId } }); if (!response.ok) return; state.memes = await response.json(); renderGrid(); } catch (error) { console.error(error); } };
-  if (modalLikeButton) { modalLikeButton.addEventListener("click", () => { if (state.selectedId) handleLike(state.selectedId); }); }
+  const setLikeButton = (button, meme) => { button.textContent = likeLabel(meme.liked); button.disabled = meme.liked; };
+  const getCookie = (name) => document.cookie.split("; ").find((row) => row.startsWith(`${name}=`))?.split("=")[1] || "";
+  const collectMemes = () => {
+    state.memes = Array.from(grid.querySelectorAll("[data-meme-id]")).map((card) => ({
+      id: Number(card.dataset.memeId),
+      title: card.dataset.memeTitle || "",
+      imageUrl: card.dataset.memeImage || "",
+      likeCount: Number(card.dataset.likeCount || 0),
+      liked: card.dataset.liked === "true",
+      card,
+    }));
+  };
+  const updateCard = (meme) => {
+    const likeButton = meme.card.querySelector(".meme-like__button");
+    const likeCount = meme.card.querySelector(".meme-like__count");
+    if (likeButton) setLikeButton(likeButton, meme);
+    if (likeCount) likeCount.textContent = `${meme.likeCount} Likes`;
+    meme.card.dataset.likeCount = String(meme.likeCount);
+    meme.card.dataset.liked = meme.liked ? "true" : "false";
+  };
+  const showModal = (index) => {
+    const meme = state.memes[index];
+    if (!meme || !modal) return;
+    state.selectedIndex = index;
+    modalImage.src = meme.imageUrl;
+    modalImage.alt = meme.title || `Meme ${meme.id}`;
+    modalTitle.textContent = meme.title || `Meme #${meme.id}`;
+    modalCount.textContent = `${meme.likeCount} Likes`;
+    setLikeButton(modalLikeButton, meme);
+    modal.classList.add("is-open");
+    modal.setAttribute("aria-hidden", "false");
+  };
+  const closeModal = () => { if (!modal) return; modal.classList.remove("is-open"); modal.setAttribute("aria-hidden", "true"); state.selectedIndex = null; };
+  const shiftModal = (delta) => {
+    if (state.selectedIndex === null || state.memes.length === 0) return;
+    const nextIndex = (state.selectedIndex + delta + state.memes.length) % state.memes.length;
+    showModal(nextIndex);
+  };
+  const handleLike = async (meme) => {
+    if (!meme || meme.liked) return;
+    try {
+      const response = await fetch(`/api/memes/${meme.id}/like/`, { method: "POST", headers: { "X-CSRFToken": getCookie("csrftoken") }, credentials: "same-origin" });
+      if (!response.ok) return;
+      const data = await response.json();
+      meme.likeCount = data.like_count ?? meme.likeCount;
+      meme.liked = true;
+      updateCard(meme);
+      if (state.selectedIndex !== null && state.memes[state.selectedIndex]?.id === meme.id) {
+        modalCount.textContent = `${meme.likeCount} Likes`;
+        setLikeButton(modalLikeButton, meme);
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  };
+  collectMemes();
+  grid.querySelectorAll("[data-meme-open]").forEach((trigger) => {
+    trigger.addEventListener("click", () => {
+      const card = trigger.closest("[data-meme-id]");
+      const index = state.memes.findIndex((meme) => meme.card === card);
+      if (index !== -1) showModal(index);
+    });
+  });
+  grid.querySelectorAll(".meme-like__button").forEach((button) => {
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      const card = button.closest("[data-meme-id]");
+      const meme = state.memes.find((item) => item.card === card);
+      if (meme) handleLike(meme);
+    });
+  });
+  if (modalLikeButton) { modalLikeButton.addEventListener("click", () => { if (state.selectedIndex !== null) handleLike(state.memes[state.selectedIndex]); }); }
+  if (prevTrigger) prevTrigger.addEventListener("click", () => shiftModal(-1));
+  if (nextTrigger) nextTrigger.addEventListener("click", () => shiftModal(1));
   closeTriggers.forEach((trigger) => trigger.addEventListener("click", closeModal));
-  document.addEventListener("keydown", (event) => { if (event.key === "Escape") closeModal(); });
-  loadMemes();
+  document.addEventListener("keydown", (event) => { if (event.key === "Escape") closeModal(); if (event.key === "ArrowLeft") shiftModal(-1); if (event.key === "ArrowRight") shiftModal(1); });
 })();
