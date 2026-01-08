@@ -1,30 +1,36 @@
 import json
 import os
+import shutil
+import tempfile
+import zipfile
 from pathlib import Path
-import zipstream
-from django.contrib.auth.decorators import login_required
+
 from django.db.models import F
 from django.http import FileResponse, Http404, JsonResponse, StreamingHttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.text import get_valid_filename
 from django.views.decorators.http import require_http_methods
-from apps.exams.forms import ContentItemUploadForm
-from apps.exams.models import ContentItem, UploadBatch, UploadFile
+from apps.exams.forms import UploadBatchForm
+from apps.exams.models import Category, ContentItem, SubCategory, UploadBatch, UploadFile
 MAX_FILE_SIZE = 15 * 1024 * 1024
 MAX_FILES_PER_BATCH = 10
-ALLOWED_EXTENSIONS = {".pdf", ".docx", ".pptx", ".xlsx", ".jpg", ".jpeg", ".png", ".txt"}
+ALLOWED_EXTENSIONS = {".pdf", ".docx", ".pptx", ".xlsx", ".jpg", ".jpeg", ".png", ".zip"}
 def upload(request):
-    if request.method == "POST":
-        form = ContentItemUploadForm(request.POST, request.FILES)
-        if form.is_valid():
-            content_item = form.save(commit=False)
-            content_item.status = ContentItem.Status.PENDING
-            content_item.download_count = 0
-            content_item.save()
-            return redirect("exams:upload_thanks")
-    else:
-        form = ContentItemUploadForm()
-    return render(request, "exams/upload.html", {"form": form})
+    form = UploadBatchForm()
+    categories = Category.objects.filter(is_active=True).order_by("sort_order", "name")
+    subcategories = SubCategory.objects.filter(is_active=True).order_by("sort_order", "name")
+    return render(
+        request,
+        "exams/upload_batch.html",
+        {
+            "form": form,
+            "categories": categories,
+            "subcategories": subcategories,
+            "max_files": MAX_FILES_PER_BATCH,
+            "max_file_size_mb": int(MAX_FILE_SIZE / (1024 * 1024)),
+            "allowed_extensions": ", ".join(sorted(ALLOWED_EXTENSIONS)),
+        },
+    )
 def upload_thanks(request):
     return render(request, "exams/upload_thanks.html")
 def download(request, pk):
@@ -43,14 +49,25 @@ def download(request, pk):
         file_handle = content_item.file.open("rb")
     except (FileNotFoundError, OSError):
         raise Http404("File not found.")
-    return FileResponse(
-        file_handle,
-        as_attachment=True,
-        filename=os.path.basename(content_item.file.name),
+    return FileResponse(file_handle, as_attachment=True, filename=os.path.basename(content_item.file.name))
+def download_upload_file(request, file_id):
+    upload_file = get_object_or_404(
+        UploadFile,
+        pk=file_id,
+        batch__status=UploadBatch.Status.APPROVED,
     )
-@login_required
+    if not upload_file.file:
+        raise Http404("File not found.")
+    storage = upload_file.file.storage
+    if not storage.exists(upload_file.file.name):
+        raise Http404("File not found.")
+    try:
+        file_handle = upload_file.file.open("rb")
+    except (FileNotFoundError, OSError):
+        raise Http404("File not found.")
+    return FileResponse(file_handle, as_attachment=True, filename=os.path.basename(upload_file.file.name))
 def upload_batch_portal(request):
-    return render(request, "exams/upload_batch.html")
+    return redirect("exams:upload")
 def _sanitize_zip_name(filename, used_names):
     safe_name = get_valid_filename(Path(filename).name) or "file"
     base = safe_name
@@ -60,8 +77,19 @@ def _sanitize_zip_name(filename, used_names):
         counter += 1
     used_names.add(safe_name)
     return safe_name
+def _store_batch_token(request, batch):
+    tokens = request.session.get("upload_batch_tokens", {})
+    tokens[str(batch.id)] = str(batch.token)
+    request.session["upload_batch_tokens"] = tokens
+def _get_request_token(request):
+    return request.headers.get("X-Upload-Token") or request.POST.get("upload_token") or request.GET.get("upload_token")
+def _has_batch_access(request, batch):
+    if batch.status == UploadBatch.Status.APPROVED:
+        return True
+    token = _get_request_token(request)
+    session_token = request.session.get("upload_batch_tokens", {}).get(str(batch.id))
+    return token and session_token and token == session_token and token == str(batch.token)
 @require_http_methods(["POST"])
-@login_required
 def create_upload_batch(request):
     payload = {}
     if request.content_type == "application/json":
@@ -69,12 +97,23 @@ def create_upload_batch(request):
             payload = json.loads(request.body.decode("utf-8"))
         except json.JSONDecodeError:
             payload = {}
-    batch = UploadBatch.objects.create(owner=request.user, context=payload.get("context", ""))
-    return JsonResponse({"batch_id": batch.id}, status=201)
+    else:
+        payload = request.POST
+    form = UploadBatchForm(payload)
+    if not form.is_valid():
+        return JsonResponse({"errors": form.errors}, status=400)
+    batch = form.save(commit=False)
+    batch.context = payload.get("context", "")
+    if request.user.is_authenticated:
+        batch.owner = request.user
+    batch.save()
+    _store_batch_token(request, batch)
+    return JsonResponse({"batch_id": batch.id, "upload_token": str(batch.token)}, status=201)
 @require_http_methods(["POST"])
-@login_required
 def upload_batch_files(request, batch_id):
-    batch = get_object_or_404(UploadBatch, pk=batch_id, owner=request.user)
+    batch = get_object_or_404(UploadBatch, pk=batch_id)
+    if not _has_batch_access(request, batch):
+        return JsonResponse({"error": "Unauthorized."}, status=403)
     incoming_files = request.FILES.getlist("files")
     if not incoming_files:
         return JsonResponse({"error": "No files provided."}, status=400)
@@ -94,6 +133,9 @@ def upload_batch_files(request, batch_id):
     for incoming in incoming_files:
         upload_file = UploadFile.objects.create(
             batch=batch,
+            content_type=batch.content_type,
+            category=batch.category,
+            subcategory=batch.subcategory,
             file=incoming,
             original_name=incoming.name,
             size=incoming.size,
@@ -102,28 +144,35 @@ def upload_batch_files(request, batch_id):
         saved_files.append({"id": upload_file.id, "name": upload_file.original_name, "size": upload_file.size})
     return JsonResponse({"files": saved_files}, status=201)
 @require_http_methods(["DELETE"])
-@login_required
 def delete_upload_file(request, file_id):
-    upload_file = get_object_or_404(UploadFile, pk=file_id, batch__owner=request.user)
+    upload_file = get_object_or_404(UploadFile, pk=file_id)
+    if not _has_batch_access(request, upload_file.batch):
+        return JsonResponse({"error": "Unauthorized."}, status=403)
     upload_file.file.delete(save=False)
     upload_file.delete()
     return JsonResponse({"deleted": True})
 @require_http_methods(["GET"])
-@login_required
 def download_upload_batch(request, batch_id):
-    batch = get_object_or_404(UploadBatch, pk=batch_id, owner=request.user)
-    zip_file = zipstream.ZipFile(mode="w", compression=zipstream.ZIP_DEFLATED)
+    batch = get_object_or_404(UploadBatch, pk=batch_id)
+    if not _has_batch_access(request, batch):
+        return JsonResponse({"error": "Unauthorized."}, status=403)
     used_names = set()
-    for upload_file in batch.files.all().iterator():
-        sanitized = _sanitize_zip_name(upload_file.original_name, used_names)
-        def file_iter(file_field=upload_file.file):
-            with file_field.open("rb") as handle:
-                while True:
-                    chunk = handle.read(8192)
-                    if not chunk:
-                        break
-                    yield chunk
-        zip_file.write_iter(sanitized, file_iter())
-    response = StreamingHttpResponse(zip_file, content_type="application/zip")
+    temp_file = tempfile.SpooledTemporaryFile(max_size=10 * 1024 * 1024, mode="w+b")
+    with zipfile.ZipFile(temp_file, mode="w", compression=zipfile.ZIP_DEFLATED) as archive:
+        for index, upload_file in enumerate(batch.files.all().order_by("created_at", "id").iterator(), start=1):
+            sanitized = _sanitize_zip_name(upload_file.original_name, used_names)
+            name = f"{index:02d}_{sanitized}"
+            with archive.open(name, "w") as dest, upload_file.file.open("rb") as src:
+                shutil.copyfileobj(src, dest, length=8192)
+    temp_file.seek(0)
+    def stream():
+        while True:
+            chunk = temp_file.read(8192)
+            if not chunk:
+                break
+            yield chunk
+        temp_file.close()
+
+    response = StreamingHttpResponse(stream(), content_type="application/zip")
     response["Content-Disposition"] = f'attachment; filename="batch-{batch_id}.zip"'
     return response

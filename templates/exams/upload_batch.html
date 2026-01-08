@@ -1,35 +1,38 @@
-{% extends "base.html" %}
+{% extends "layouts/public_base.html" %}
 {% block content %}
-<section class="container" style="max-width:900px;margin:40px auto;">
-  <h1>Prüfungen & Lernstoff hochladen</h1>
-  <div id="upload-dropzone" style="border:2px dashed #0F3D32;padding:32px;text-align:center;border-radius:12px;background:#fff;">
-    <p>Dateien hierher ziehen oder auswählen</p>
-    <input id="file-input" type="file" multiple accept=".pdf,.docx,.pptx,.xlsx,.jpg,.jpeg,.png,.txt" />
-    <p style="font-size:14px;color:#666;">Max. 10 Dateien, 15 MB pro Datei.</p>
-  </div>
-  <ul id="file-list" style="list-style:none;padding:0;margin-top:24px;"></ul>
-  <div style="display:flex;gap:12px;margin-top:24px;">
-    <button id="next-button" class="btn" disabled>Next</button>
-    <button id="download-button" class="btn" disabled>Download ZIP</button>
+<section class="kv-stack">
+  <div><h1 class="kv-title">Upload</h1><p class="kv-subtitle">Lade Prüfungen oder Lernstoff hoch. Dein Beitrag wird vor der Veröffentlichung geprüft.</p></div>
+  <div class="kv-card kv-stack" style="gap:18px;">
+    <div class="kv-grid" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;">
+      <div class="kv-field"><label for="id_content_type">Typ</label>{{ form.content_type }}</div>
+      <div class="kv-field"><label for="id_category">Kategorie</label><select id="id_category" name="category" class="w-full rounded border border-gray-300 bg-white p-2 text-sm text-gray-900"><option value="">Bitte wählen</option>{% for category in categories %}<option value="{{ category.id }}">{{ category.name }}</option>{% endfor %}</select></div>
+      <div class="kv-field"><label for="id_subcategory">Subkategorie</label><select id="id_subcategory" name="subcategory" class="w-full rounded border border-gray-300 bg-white p-2 text-sm text-gray-900" disabled><option value="">Optional</option>{% for subcategory in subcategories %}<option value="{{ subcategory.id }}" data-category="{{ subcategory.category_id }}">{{ subcategory.name }}</option>{% endfor %}</select></div>
+    </div>
+    <div id="upload-dropzone" class="kv-card" style="border:2px dashed #0F3D32;background:#f8fafb;text-align:center;padding:28px;">
+      <p style="margin:0;font-weight:600;">Dateien hierher ziehen</p><p class="kv-note" style="margin-top:6px;">oder Dateien auswählen</p>
+      <label class="kv-btn kv-btn-primary" style="margin-top:10px;">Dateien auswählen<input id="file-input" type="file" multiple hidden accept=".pdf,.docx,.pptx,.xlsx,.jpg,.jpeg,.png,.zip" /></label>
+      <p class="kv-note" style="margin-top:10px;">Max. {{ max_files }} Dateien, {{ max_file_size_mb }} MB pro Datei. Erlaubt: {{ allowed_extensions }}.</p>
+    </div>
+    <div id="batch-status" class="kv-card" style="display:none;border-color:#C6A15B;background:#fffaf0;"><strong>Batch erstellt.</strong> Du kannst deine Dateien als ZIP herunterladen.</div>
+    <div class="kv-stack" style="gap:12px;"><h3 style="margin:0;">Dateien</h3><div id="file-list" class="kv-stack" style="gap:12px;"></div><div id="upload-errors" class="kv-note" style="color:#b91c1c;"></div></div>
+    <div class="kv-page-header" style="justify-content:flex-start;gap:12px;"><button id="cancel-button" type="button" class="kv-btn kv-btn-secondary">Abbrechen</button><button id="upload-button" type="button" class="kv-btn kv-btn-primary" disabled>Hochladen</button><button id="download-button" type="button" class="kv-btn kv-btn-primary" disabled>ZIP herunterladen</button></div>
   </div>
 </section>
 <script>
-  const dropzone=document.getElementById('upload-dropzone');
-  const fileInput=document.getElementById('file-input');
-  const fileList=document.getElementById('file-list');
-  const nextButton=document.getElementById('next-button');
-  const downloadButton=document.getElementById('download-button');
-  let batchId=null,successCount=0;
-  const getCookie=(name)=>{const value=`; ${document.cookie}`;const parts=value.split(`; ${name}=`);return parts.length===2?parts.pop().split(';').shift():'';};
-  const createBatch=async()=>{if(batchId)return batchId;const response=await fetch('/api/upload-batches/',{method:'POST',headers:{'X-CSRFToken':getCookie('csrftoken')}});const data=await response.json();batchId=data.batch_id;downloadButton.disabled=false;return batchId;};
-  const updateButtons=()=>{nextButton.disabled=successCount===0;};
-  const addFileRow=(file)=>{const li=document.createElement('li');li.style.cssText='border:1px solid #e5e5e5;border-radius:8px;padding:12px;margin-bottom:12px;';li.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;"><div><strong>${file.name}</strong><div style="font-size:12px;color:#666;">${(file.size/(1024*1024)).toFixed(2)} MB</div></div><button data-action="remove" style="border:none;background:transparent;font-size:18px;cursor:pointer;">×</button></div><div style="margin-top:8px;background:#f1f1f1;border-radius:6px;overflow:hidden;"><div data-progress style="height:8px;width:0%;background:#0F3D32;"></div></div><div data-status style="margin-top:6px;font-size:12px;color:#666;">Wartet...</div>`;fileList.appendChild(li);return li;};
-  const uploadFile=async(file,row)=>{const progressBar=row.querySelector('[data-progress]');const status=row.querySelector('[data-status]');const removeButton=row.querySelector('[data-action="remove"]');status.textContent='Upload läuft...';const batch=await createBatch();const formData=new FormData();formData.append('files',file);const xhr=new XMLHttpRequest();xhr.open('POST',`/api/upload-batches/${batch}/files/`);xhr.setRequestHeader('X-CSRFToken',getCookie('csrftoken'));xhr.upload.onprogress=(event)=>{if(event.lengthComputable){progressBar.style.width=`${((event.loaded/event.total)*100).toFixed(0)}%`;}};xhr.onload=()=>{if(xhr.status===201){const response=JSON.parse(xhr.responseText);row.dataset.fileId=response.files[0].id;status.textContent='Erfolgreich hochgeladen';successCount+=1;updateButtons();}else{status.textContent='Upload fehlgeschlagen';}};xhr.onerror=()=>{status.textContent='Upload fehlgeschlagen';};removeButton.addEventListener('click',async()=>{if(row.dataset.fileId){await fetch(`/api/upload-files/${row.dataset.fileId}/`,{method:'DELETE',headers:{'X-CSRFToken':getCookie('csrftoken')}});successCount=Math.max(0,successCount-1);updateButtons();}row.remove();});xhr.send(formData);};
-  const handleFiles=(files)=>{Array.from(files).forEach((file)=>{const row=addFileRow(file);uploadFile(file,row);});};
-  dropzone.addEventListener('dragover',(event)=>{event.preventDefault();dropzone.style.background='#f8f8f8';});
-  dropzone.addEventListener('dragleave',()=>{dropzone.style.background='#fff';});
-  dropzone.addEventListener('drop',(event)=>{event.preventDefault();dropzone.style.background='#fff';handleFiles(event.dataTransfer.files);});
-  fileInput.addEventListener('change',(event)=>{handleFiles(event.target.files);fileInput.value='';});
-  downloadButton.addEventListener('click',()=>{if(batchId){window.open(`/api/upload-batches/${batchId}/download.zip`,'_blank');}});
+const qs=(s)=>document.querySelector(s),drop=qs('#upload-dropzone'),input=qs('#file-input'),list=qs('#file-list'),btnUpload=qs('#upload-button'),btnCancel=qs('#cancel-button'),btnDownload=qs('#download-button'),errors=qs('#upload-errors'),statusBox=qs('#batch-status'),cat=qs('#id_category'),sub=qs('#id_subcategory');
+const maxFiles={{ max_files }},maxSize={{ max_file_size_mb }}*1024*1024,exts=new Set(['.pdf','.docx','.pptx','.xlsx','.jpg','.jpeg','.png','.zip']);let batchId=null,token=null,pending=[];
+const cookie=(n)=>{const v=`; ${document.cookie}`.split(`; ${n}=`);return v.length===2?v.pop().split(';').shift():'';};
+const updateSub=()=>{const v=cat.value;[...sub.options].forEach(o=>{o.hidden=!!o.value&&o.dataset.category!==v;});sub.value='';sub.disabled=!v;};
+const addRow=(file)=>{const row=document.createElement('div');row.className='kv-card';row.dataset.name=file.name;row.innerHTML=`<div style="display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;"><div><strong>${file.name}</strong><div class="kv-note">${(file.size/1048576).toFixed(2)} MB</div><div class="kv-note" data-status>Bereit</div><div style="margin-top:6px;background:#f1f5f9;border-radius:6px;overflow:hidden;"><div data-progress style="height:8px;width:0%;background:#0F3D32;"></div></div></div><button data-action="remove" class="kv-btn kv-btn-secondary" type="button">Entfernen</button></div>`;list.appendChild(row);return row;};
+const validate=(files)=>{const errs=[],total=list.children.length+files.length;if(total>maxFiles)errs.push(`Maximal ${maxFiles} Dateien pro Upload.`);files.forEach(f=>{const e='.'+f.name.split('.').pop().toLowerCase();if(!exts.has(e))errs.push(`${f.name}: Dateityp nicht erlaubt.`);if(f.size>maxSize)errs.push(`${f.name}: Datei ist zu gross.`);});return errs;};
+const createBatch=async()=>{if(batchId)return batchId;const payload={content_type:qs('#id_content_type').value,category:cat.value||'',subcategory:sub.value||''};const res=await fetch('/api/upload-batches/',{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':cookie('csrftoken')},body:JSON.stringify(payload)});const data=await res.json();if(!res.ok)throw new Error('Batch konnte nicht erstellt werden.');batchId=data.batch_id;token=data.upload_token;statusBox.style.display='block';btnDownload.disabled=false;return batchId;};
+const uploadFile=async(file,row)=>{const bar=row.querySelector('[data-progress]'),status=row.querySelector('[data-status]'),remove=row.querySelector('[data-action="remove"]');status.textContent='Upload läuft...';const batch=await createBatch();const form=new FormData();form.append('files',file);const xhr=new XMLHttpRequest();xhr.open('POST',`/api/upload-batches/${batch}/files/`);xhr.setRequestHeader('X-CSRFToken',cookie('csrftoken'));xhr.setRequestHeader('X-Upload-Token',token);xhr.upload.onprogress=(e)=>{if(e.lengthComputable){bar.style.width=`${((e.loaded/e.total)*100).toFixed(0)}%`;}};xhr.onload=()=>{if(xhr.status===201){const resp=JSON.parse(xhr.responseText);row.dataset.fileId=resp.files[0].id;status.textContent='Erfolgreich hochgeladen';}else{status.textContent='Upload fehlgeschlagen';}updateButtons();};xhr.onerror=()=>{status.textContent='Upload fehlgeschlagen';updateButtons();};remove.addEventListener('click',async()=>{if(row.dataset.fileId){await fetch(`/api/upload-files/${row.dataset.fileId}/`,{method:'DELETE',headers:{'X-CSRFToken':cookie('csrftoken'),'X-Upload-Token':token}});}else{pending=pending.filter((f)=>f.name!==file.name);}row.remove();updateButtons();});xhr.send(form);};
+const handle=(files)=>{const incoming=[...files],errs=validate(incoming);if(errs.length){errors.textContent=errs.join(' ');return;}errors.textContent='';incoming.forEach(f=>{pending.push(f);const row=addRow(f);row.querySelector('[data-action="remove"]').addEventListener('click',()=>{pending=pending.filter((p)=>p.name!==f.name);});});updateButtons();};
+const updateButtons=()=>{btnUpload.disabled=!pending.length;btnDownload.disabled=!batchId;};
+btnUpload.addEventListener('click',async()=>{const queue=[...pending];pending=[];updateButtons();for(const file of queue){const row=list.querySelector(`[data-name="${CSS.escape(file.name)}"]`);if(row){await uploadFile(file,row);}}});
+btnCancel.addEventListener('click',()=>{pending=[];list.innerHTML='';errors.textContent='';updateButtons();});
+btnDownload.addEventListener('click',()=>{if(batchId){window.open(`/api/upload-batches/${batchId}/download.zip?upload_token=${token}`,'_blank');}});
+drop.addEventListener('dragover',(e)=>{e.preventDefault();drop.style.background='#eef2f3';});drop.addEventListener('dragleave',()=>{drop.style.background='#f8fafb';});drop.addEventListener('drop',(e)=>{e.preventDefault();drop.style.background='#f8fafb';handle(e.dataTransfer.files);});
+input.addEventListener('change',(e)=>{handle(e.target.files);input.value='';});cat.addEventListener('change',updateSub);updateSub();
 </script>
-{% endblock %}
+{% endblock content %}

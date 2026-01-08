@@ -191,7 +191,7 @@ if RENDER_DISK_PATH:
     MEDIA_ROOT = os.path.join(RENDER_DISK_PATH, "media")
     MEDIA_URL = "/media/"
 else:
-    MEDIA_URL = "media/"
+    MEDIA_URL = "/media/"
     MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 
 USE_S3_MEDIA = str2bool(os.environ.get("USE_S3_MEDIA", "false"))
