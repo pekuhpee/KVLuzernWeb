@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="container" style="max-width:900px;margin:40px auto;">
+  <h1>Prüfungen & Lernstoff hochladen</h1>
+  <div id="upload-dropzone" style="border:2px dashed #0F3D32;padding:32px;text-align:center;border-radius:12px;background:#fff;">
+    <p>Dateien hierher ziehen oder auswählen</p>
+    <input id="file-input" type="file" multiple accept=".pdf,.docx,.pptx,.xlsx,.jpg,.jpeg,.png,.txt" />
+    <p style="font-size:14px;color:#666;">Max. 10 Dateien, 15 MB pro Datei.</p>
+  </div>
+  <ul id="file-list" style="list-style:none;padding:0;margin-top:24px;"></ul>
+  <div style="display:flex;gap:12px;margin-top:24px;">
+    <button id="next-button" class="btn" disabled>Next</button>
+    <button id="download-button" class="btn" disabled>Download ZIP</button>
+  </div>
+</section>
+<script>
+  const dropzone=document.getElementById('upload-dropzone');
+  const fileInput=document.getElementById('file-input');
+  const fileList=document.getElementById('file-list');
+  const nextButton=document.getElementById('next-button');
+  const downloadButton=document.getElementById('download-button');
+  let batchId=null,successCount=0;
+  const getCookie=(name)=>{const value=`; ${document.cookie}`;const parts=value.split(`; ${name}=`);return parts.length===2?parts.pop().split(';').shift():'';};
+  const createBatch=async()=>{if(batchId)return batchId;const response=await fetch('/api/upload-batches/',{method:'POST',headers:{'X-CSRFToken':getCookie('csrftoken')}});const data=await response.json();batchId=data.batch_id;downloadButton.disabled=false;return batchId;};
+  const updateButtons=()=>{nextButton.disabled=successCount===0;};
+  const addFileRow=(file)=>{const li=document.createElement('li');li.style.cssText='border:1px solid #e5e5e5;border-radius:8px;padding:12px;margin-bottom:12px;';li.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;"><div><strong>${file.name}</strong><div style="font-size:12px;color:#666;">${(file.size/(1024*1024)).toFixed(2)} MB</div></div><button data-action="remove" style="border:none;background:transparent;font-size:18px;cursor:pointer;">×</button></div><div style="margin-top:8px;background:#f1f1f1;border-radius:6px;overflow:hidden;"><div data-progress style="height:8px;width:0%;background:#0F3D32;"></div></div><div data-status style="margin-top:6px;font-size:12px;color:#666;">Wartet...</div>`;fileList.appendChild(li);return li;};
+  const uploadFile=async(file,row)=>{const progressBar=row.querySelector('[data-progress]');const status=row.querySelector('[data-status]');const removeButton=row.querySelector('[data-action="remove"]');status.textContent='Upload läuft...';const batch=await createBatch();const formData=new FormData();formData.append('files',file);const xhr=new XMLHttpRequest();xhr.open('POST',`/api/upload-batches/${batch}/files/`);xhr.setRequestHeader('X-CSRFToken',getCookie('csrftoken'));xhr.upload.onprogress=(event)=>{if(event.lengthComputable){progressBar.style.width=`${((event.loaded/event.total)*100).toFixed(0)}%`;}};xhr.onload=()=>{if(xhr.status===201){const response=JSON.parse(xhr.responseText);row.dataset.fileId=response.files[0].id;status.textContent='Erfolgreich hochgeladen';successCount+=1;updateButtons();}else{status.textContent='Upload fehlgeschlagen';}};xhr.onerror=()=>{status.textContent='Upload fehlgeschlagen';};removeButton.addEventListener('click',async()=>{if(row.dataset.fileId){await fetch(`/api/upload-files/${row.dataset.fileId}/`,{method:'DELETE',headers:{'X-CSRFToken':getCookie('csrftoken')}});successCount=Math.max(0,successCount-1);updateButtons();}row.remove();});xhr.send(formData);};
+  const handleFiles=(files)=>{Array.from(files).forEach((file)=>{const row=addFileRow(file);uploadFile(file,row);});};
+  dropzone.addEventListener('dragover',(event)=>{event.preventDefault();dropzone.style.background='#f8f8f8';});
+  dropzone.addEventListener('dragleave',()=>{dropzone.style.background='#fff';});
+  dropzone.addEventListener('drop',(event)=>{event.preventDefault();dropzone.style.background='#fff';handleFiles(event.dataTransfer.files);});
+  fileInput.addEventListener('change',(event)=>{handleFiles(event.target.files);fileInput.value='';});
+  downloadButton.addEventListener('click',()=>{if(batchId){window.open(`/api/upload-batches/${batchId}/download.zip`,'_blank');}});
+</script>
+{% endblock %}
