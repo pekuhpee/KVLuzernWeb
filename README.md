@@ -55,6 +55,11 @@ A common set of features is provided out-of-the-box: **API, DataTables, Charts, 
 - `DATABASE_URL` (Render Postgres connection string)
 - `SECRET_KEY` (stable value for consistent sessions)
 
+### Render persistent disk (uploads)
+
+- Attach a persistent disk at `/var/data`.
+- Set `RENDER_DISK_PATH=/var/data` so Django stores uploads at `/var/data/media`.
+
 ## [Rocket PRO Version](https://app-generator.dev/product/rocket-pro/django/)
 
 > The premium version provides more features, priority on support, and is more often updated - [Live Demo](https://rocket-django-pro.onrender.com/).
