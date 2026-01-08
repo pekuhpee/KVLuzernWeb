@@ -12,7 +12,7 @@
 
   <header class="kv-header">
     <div class="kv-container kv-nav">
-      <a class="kv-brand" href="{% url 'pruefungen' %}">KV Luzern Survival</a>
+      <a class="kv-brand" href="{% url 'pruefungen' %}">KV Luzern Survival Guide</a>
       <nav class="kv-nav-links" aria-label="Hauptnavigation">
         <a class="kv-link{% if request.resolver_match.url_name == 'pruefungen' %} is-active{% endif %}" href="{% url 'pruefungen' %}">Prüfungen</a>
         <a class="kv-link{% if request.resolver_match.app_name == 'memes' %} is-active{% endif %}" href="{% url 'memes:index' %}">Memes</a>
@@ -27,6 +27,29 @@
       {% block content %}{% endblock content %}
     </div>
   </main>
+
+  <footer class="kv-footer">
+    <div class="kv-container kv-footer-top">
+      <div class="kv-footer-brand">KV Luzern Survival Guide</div>
+      <div class="kv-footer-links">
+        <a class="kv-footer-link" href="#disclaimer">Disclaimer</a>
+        <a class="kv-footer-link" href="#cookies-privacy">Cookies &amp; Privacy</a>
+      </div>
+    </div>
+    <div class="kv-container kv-footer-legal">
+      <section id="disclaimer" class="kv-footer-section">
+        <h2>Disclaimer</h2>
+        <p>Dieses Projekt ist ein unabhängiges Schüler:innenprojekt.</p>
+        <p>Es besteht keine offizielle Verbindung zur KV Luzern.</p>
+        <p>Alle Inhalte sind subjektiv und ohne Gewähr.</p>
+      </section>
+      <section id="cookies-privacy" class="kv-footer-section">
+        <h2>Cookies &amp; Privacy</h2>
+        <p>Wir verwenden ausschließlich technisch notwendige Cookies, damit die Website funktioniert.</p>
+        <p>Kein Tracking, keine Analysen, keine Drittanbieter.</p>
+      </section>
+    </div>
+  </footer>
 
   {% include "includes/scripts.html" %}
   {% block extra_js %}{% endblock extra_js %}
