@@ -1,0 +1,27 @@
+{% extends "layouts/public_base.html" %}
+
+{% block content %}
+  <section class="kv-stack">
+    <div class="kv-page-header">
+      <div>
+        <h1 class="kv-title">Memes</h1>
+        <p class="kv-subtitle">Nur geprüfte Memes. Neueste zuerst.</p>
+      </div>
+      <a href="{% url 'memes:upload' %}" class="kv-btn kv-btn-primary">Meme hochladen</a>
+    </div>
+
+    {% if memes %}
+      <div class="kv-grid">
+        {% for meme in memes %}
+          <div class="kv-card" style="padding: 12px;">
+            <img src="{{ meme.image.url }}" alt="Meme {{ meme.id }}" style="width: 100%; height: auto; display: block; border-radius: 6px;">
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="kv-card">
+        <p class="kv-subtitle">Noch keine Memes. Lade das erste hoch!</p>
+      </div>
+    {% endif %}
+  </section>
+{% endblock content %}
