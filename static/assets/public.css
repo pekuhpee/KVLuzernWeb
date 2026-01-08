@@ -22,6 +22,27 @@ body.kv-body { margin: 0; font-family: Bahnschrift, "Segoe UI", "Helvetica Neue"
 .kv-grid { display: grid; grid-template-columns: repeat(1, minmax(0, 1fr)); gap: 16px; }
 @media (min-width: 768px) { .kv-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (min-width: 1024px) { .kv-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+.meme-grid { display: grid; grid-template-columns: repeat(1, minmax(0, 1fr)); gap: 24px; }
+@media (min-width: 640px) { .meme-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 1024px) { .meme-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.meme-card { border-radius: 16px; border: 1px solid var(--kv-border); background: #ffffff; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 10px 25px rgba(15, 61, 50, 0.08); }
+.meme-card__button { appearance: none; border: none; padding: 0; background: transparent; cursor: pointer; text-align: left; }
+.meme-card img { width: 100%; height: auto; display: block; }
+.meme-card__body { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.meme-card__title { margin: 0; font-weight: 600; font-size: 1rem; color: var(--kv-text); }
+.meme-like { display: inline-flex; align-items: center; gap: 10px; }
+.meme-like__button { border-radius: 999px; border: 1px solid var(--kv-border); background: #f9fafb; padding: 8px 14px; font-weight: 600; color: var(--kv-text); cursor: pointer; transition: all 0.2s ease; }
+.meme-like__button:hover, .meme-like__button:focus { border-color: var(--kv-accent); color: var(--kv-primary); }
+.meme-like__button[disabled] { cursor: not-allowed; opacity: 0.6; }
+.meme-like__count { font-weight: 600; color: var(--kv-primary); }
+.meme-modal { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; padding: 24px; z-index: 50; }
+.meme-modal.is-open { display: flex; }
+.meme-modal__backdrop { position: absolute; inset: 0; background: rgba(10, 12, 16, 0.75); }
+.meme-modal__content { position: relative; background: #ffffff; border-radius: 18px; padding: 20px; max-width: 900px; width: 100%; display: flex; flex-direction: column; gap: 16px; z-index: 1; }
+.meme-modal__content img { width: 100%; height: auto; border-radius: 14px; }
+.meme-modal__close { position: absolute; top: 12px; right: 12px; border: none; background: #ffffff; border-radius: 50%; width: 36px; height: 36px; font-size: 1.5rem; line-height: 1; cursor: pointer; box-shadow: 0 6px 12px rgba(15, 61, 50, 0.2); }
+.meme-modal__footer { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; }
+.meme-modal__title { margin: 0; font-weight: 600; color: var(--kv-text); }
 .kv-field label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 6px; color: var(--kv-text); }
 .kv-form input, .kv-form select, .kv-form textarea { width: 100%; border: 1px solid var(--kv-border); padding: 10px 12px; background: var(--kv-bg); font-size: 0.9rem; color: var(--kv-text); }
 .kv-form input:focus, .kv-form select:focus, .kv-form textarea:focus { outline: none; border-color: var(--kv-accent); box-shadow: 0 0 0 2px rgba(198, 161, 91, 0.2); }

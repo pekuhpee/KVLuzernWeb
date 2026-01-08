@@ -13,11 +13,13 @@ class Meme(models.Model):
         REJECTED = "rejected", "Rejected"
 
     image = models.ImageField(upload_to="memes/")
+    title = models.CharField(max_length=200, blank=True)
     status = models.CharField(
         max_length=20,
         choices=Status.choices,
         default=Status.PENDING,
     )
+    like_count = models.PositiveIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     approved_at = models.DateTimeField(null=True, blank=True)
 
@@ -27,3 +29,21 @@ class Meme(models.Model):
 
     def __str__(self):
         return f"Meme {self.pk} ({self.status})"
+
+
+class MemeLike(models.Model):
+    meme = models.ForeignKey(Meme, related_name="likes", on_delete=models.CASCADE)
+    visitor_id = models.UUIDField()
+    ip_hash = models.CharField(max_length=64, blank=True)
+    ua_hash = models.CharField(max_length=64, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["meme", "visitor_id"], name="unique_meme_like_per_visitor"
+            )
+        ]
+
+    def __str__(self):
+        return f"MemeLike {self.meme_id} by {self.visitor_id}"

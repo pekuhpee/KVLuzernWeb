@@ -20,6 +20,8 @@ from django.conf import settings
 from django.conf.urls.static import static
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
 
+from apps.memes import views as meme_views
+
 from django.views.static import serve 
 
 urlpatterns = [
@@ -33,6 +35,8 @@ urlpatterns = [
     path("users/", include("apps.users.urls")),
     path("charts/", include("apps.charts.urls")),
     path("tasks/", include("apps.tasks.urls")),
+    path("api/memes/", meme_views.api_memes, name="api_memes"),
+    path("api/memes/<int:meme_id>/like/", meme_views.api_like_meme, name="api_like_meme"),
     path('api/docs/schema', SpectacularAPIView.as_view(), name='schema'),
     path('api/docs/'      , SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
     path("__debug__/", include("debug_toolbar.urls")),

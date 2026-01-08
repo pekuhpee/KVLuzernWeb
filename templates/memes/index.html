@@ -1,4 +1,5 @@
 {% extends "layouts/public_base.html" %}
+{% load static %}
 
 {% block content %}
   <section class="kv-stack">
@@ -10,18 +11,39 @@
       <a href="{% url 'memes:upload' %}" class="kv-btn kv-btn-primary">Meme hochladen</a>
     </div>
 
-    {% if memes %}
-      <div class="kv-grid">
+    <div id="meme-grid" class="meme-grid" aria-live="polite">
+      {% if memes %}
         {% for meme in memes %}
-          <div class="kv-card" style="padding: 12px;">
-            <img src="{{ meme.image.url }}" alt="Meme {{ meme.id }}" style="width: 100%; height: auto; display: block; border-radius: 6px;">
+          <div class="meme-card">
+            <img src="{{ meme.image.url }}" alt="Meme {{ meme.id }}">
           </div>
         {% endfor %}
-      </div>
-    {% else %}
-      <div class="kv-card">
-        <p class="kv-subtitle">Noch keine Memes freigegeben.</p>
-      </div>
-    {% endif %}
+      {% else %}
+        <div class="kv-card">
+          <p class="kv-subtitle">Noch keine Memes freigegeben.</p>
+        </div>
+      {% endif %}
+    </div>
   </section>
+
+  <div id="meme-modal" class="meme-modal" aria-hidden="true">
+    <div class="meme-modal__backdrop" data-modal-close></div>
+    <div class="meme-modal__content" role="dialog" aria-modal="true">
+      <button class="meme-modal__close" type="button" aria-label="Schliessen" data-modal-close>
+        ×
+      </button>
+      <img id="meme-modal-image" src="" alt="">
+      <div class="meme-modal__footer">
+        <p id="meme-modal-title" class="meme-modal__title"></p>
+        <div class="meme-like">
+          <button id="meme-modal-like" class="meme-like__button" type="button"></button>
+          <span id="meme-modal-count" class="meme-like__count"></span>
+        </div>
+      </div>
+    </div>
+  </div>
 {% endblock content %}
+
+{% block extra_js %}
+  <script src="{% static 'assets/memes.js' %}"></script>
+{% endblock extra_js %}
