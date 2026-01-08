@@ -1,6 +1,11 @@
 from django.db import models
 
 
+class ApprovedContentItemManager(models.Manager):
+    def get_queryset(self):
+        return super().get_queryset().filter(status=self.model.Status.APPROVED)
+
+
 class ContentItem(models.Model):
     class ContentType(models.TextChoices):
         EXAM = "EXAM", "Exam"
@@ -39,6 +44,10 @@ class ContentItem(models.Model):
     download_count = models.PositiveIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     approved_at = models.DateTimeField(null=True, blank=True)
+
+    # Keep the default manager unfiltered so admin can review all uploads.
+    objects = models.Manager()
+    approved = ApprovedContentItemManager()
 
     def __str__(self) -> str:
         return self.title
