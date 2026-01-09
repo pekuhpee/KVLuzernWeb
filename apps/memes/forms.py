@@ -6,10 +6,21 @@ from apps.memes.models import Meme
 class MemeUploadForm(forms.ModelForm):
     class Meta:
         model = Meme
-        fields = ["image"]
+        fields = ["title", "image"]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields["title"].widget.attrs.update(
+            {
+                "class": (
+                    "w-full rounded border border-gray-300 bg-white p-2 text-sm text-gray-900 "
+                    "dark:border-gray-600 dark:bg-gray-900 dark:text-white"
+                ),
+                "required": "required",
+            }
+        )
+        self.fields["title"].label = "Titel"
+        self.fields["title"].help_text = "Gib deinem Meme einen kurzen Titel."
         self.fields["image"].widget.attrs.update(
             {
                 "class": (

@@ -7,8 +7,9 @@ from apps.memes.models import Meme, MemeLike
 
 @admin.register(Meme)
 class MemeAdmin(admin.ModelAdmin):
-    list_display = ("id", "status", "preview", "created_at", "approved_at")
+    list_display = ("id", "title", "status", "preview", "created_at", "approved_at")
     list_filter = ("status", "created_at")
+    search_fields = ("title",)
     actions = ("approve_selected", "reject_selected")
     readonly_fields = ("preview",)
 
