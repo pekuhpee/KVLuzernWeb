@@ -11,21 +11,22 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.text import get_valid_filename
 from django.views.decorators.http import require_http_methods
 from apps.exams.forms import UploadBatchForm
-from apps.exams.models import Category, ContentItem, SubCategory, UploadBatch, UploadFile
+from apps.exams.models import ContentItem, MetaCategory, UploadBatch, UploadFile
 MAX_FILE_SIZE = 15 * 1024 * 1024
 MAX_FILES_PER_BATCH = 10
 ALLOWED_EXTENSIONS = {".pdf", ".docx", ".pptx", ".xlsx", ".jpg", ".jpeg", ".png", ".zip"}
 def upload(request):
     form = UploadBatchForm()
-    categories = Category.objects.filter(is_active=True).order_by("sort_order", "name")
-    subcategories = SubCategory.objects.filter(is_active=True).order_by("sort_order", "name")
+    meta_labels = {
+        category.key: category.label
+        for category in MetaCategory.objects.filter(is_active=True).order_by("sort_order", "label")
+    }
     return render(
         request,
         "exams/upload_batch.html",
         {
             "form": form,
-            "categories": categories,
-            "subcategories": subcategories,
+            "meta_labels": meta_labels,
             "max_files": MAX_FILES_PER_BATCH,
             "max_file_size_mb": int(MAX_FILE_SIZE / (1024 * 1024)),
             "allowed_extensions": ", ".join(sorted(ALLOWED_EXTENSIONS)),
@@ -175,4 +176,57 @@ def download_upload_batch(request, batch_id):
 
     response = StreamingHttpResponse(stream(), content_type="application/zip")
     response["Content-Disposition"] = f'attachment; filename="batch-{batch_id}.zip"'
+    return response
+
+
+@require_http_methods(["GET"])
+def download_filtered_zip(request):
+    approved_items = ContentItem.objects.filter(status=ContentItem.Status.APPROVED).exclude(file="")
+    type_key = request.GET.get("type"); year_key = request.GET.get("year"); subject_key = request.GET.get("subject")
+    teacher_key = request.GET.get("teacher"); program_key = request.GET.get("program"); sort = request.GET.get("sort", "newest")
+    items = approved_items
+    if type_key:
+        items = items.filter(content_type=type_key)
+    if year_key:
+        try:
+            items = items.filter(year=int(year_key))
+        except ValueError:
+            items = items.none()
+    if subject_key:
+        items = items.filter(subject=subject_key)
+    if teacher_key:
+        items = items.filter(teacher=teacher_key)
+    if program_key:
+        items = items.filter(program=program_key)
+
+    if sort == "most_downloaded":
+        items = items.order_by("-download_count", "-created_at")
+    else:
+        items = items.order_by("-created_at")
+    used_names = set()
+    temp_file = tempfile.SpooledTemporaryFile(max_size=10 * 1024 * 1024, mode="w+b")
+    with zipfile.ZipFile(temp_file, mode="w", compression=zipfile.ZIP_DEFLATED) as archive:
+        for index, content_item in enumerate(items.iterator(), start=1):
+            if not content_item.file:
+                continue
+            original_name = os.path.basename(content_item.file.name) or f"item-{content_item.pk}.dat"
+            sanitized = _sanitize_zip_name(original_name, used_names)
+            name = f"{index:03d}_{sanitized}"
+            try:
+                with archive.open(name, "w") as dest, content_item.file.open("rb") as src:
+                    shutil.copyfileobj(src, dest, length=8192)
+            except (FileNotFoundError, OSError):
+                continue
+    temp_file.seek(0)
+
+    def stream():
+        while True:
+            chunk = temp_file.read(8192)
+            if not chunk:
+                break
+            yield chunk
+        temp_file.close()
+
+    response = StreamingHttpResponse(stream(), content_type="application/zip")
+    response["Content-Disposition"] = 'attachment; filename="pruefungen.zip"'
     return response

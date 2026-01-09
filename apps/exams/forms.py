@@ -1,5 +1,6 @@
 from django import forms
-from apps.exams.models import Category, ContentItem, SubCategory, UploadBatch
+from apps.exams.models import ContentItem, MetaOption, UploadBatch
+from apps.ranking.models import Teacher
 
 
 class ContentItemUploadForm(forms.ModelForm):
@@ -40,28 +41,36 @@ class ContentItemUploadForm(forms.ModelForm):
 class UploadBatchForm(forms.ModelForm):
     class Meta:
         model = UploadBatch
-        fields = ["content_type", "category", "subcategory"]
+        fields = ["type_option", "year_option", "subject_option", "teacher", "program_option"]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         input_class = "kv-input"
-        self.fields["category"].queryset = Category.objects.filter(is_active=True).order_by("sort_order", "name")
-        self.fields["subcategory"].queryset = SubCategory.objects.filter(is_active=True).order_by("sort_order", "name")
+        option_fields = {
+            "type_option": "type",
+            "year_option": "year",
+            "subject_option": "subject",
+            "program_option": "program",
+        }
+        for field_name, category_key in option_fields.items():
+            self.fields[field_name].queryset = MetaOption.objects.filter(
+                category__key=category_key,
+                category__is_active=True,
+                is_active=True,
+            ).order_by("sort_order", "label")
+        self.fields["teacher"].queryset = Teacher.objects.order_by("-active", "name")
         for name, field in self.fields.items():
             if isinstance(field.widget, forms.Select):
                 field.widget.attrs["class"] = input_class
+                field.empty_label = "Bitte wählen"
             else:
                 field.widget.attrs["class"] = input_class
-        self.fields["subcategory"].required = False
 
-    def clean(self):
-        cleaned_data = super().clean()
-        category = cleaned_data.get("category")
-        subcategory = cleaned_data.get("subcategory")
-        if subcategory and category and subcategory.category_id != category.id:
-            self.add_error("subcategory", "Die Subkategorie passt nicht zur Kategorie.")
-        if subcategory and not subcategory.is_active:
-            self.add_error("subcategory", "Die Subkategorie ist nicht aktiv.")
-        if category and not category.is_active:
-            self.add_error("category", "Die Kategorie ist nicht aktiv.")
-        return cleaned_data
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        type_option = self.cleaned_data.get("type_option")
+        if type_option and type_option.value_key in dict(ContentItem.ContentType.choices):
+            instance.content_type = type_option.value_key
+        if commit:
+            instance.save()
+        return instance
