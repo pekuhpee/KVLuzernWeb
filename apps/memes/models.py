@@ -13,7 +13,7 @@ class Meme(models.Model):
         REJECTED = "rejected", "Rejected"
 
     image = models.ImageField(upload_to="memes/")
-    title = models.CharField(max_length=200, blank=True)
+    title = models.CharField(max_length=200)
     status = models.CharField(
         max_length=20,
         choices=Status.choices,
