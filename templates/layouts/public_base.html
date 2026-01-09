@@ -30,25 +30,15 @@
 
   <footer class="kv-footer">
     <div class="kv-container kv-footer-top">
-      <div class="kv-footer-brand">KV Luzern Survival Guide</div>
+      <div>
+        <div class="kv-footer-brand">KV Luzern Survival Guide</div>
+        <p class="kv-footer-tagline">Ein unabhängiges Schüler:innenprojekt, ausschliesslich von Lernenden getragen.</p>
+      </div>
       <div class="kv-footer-links">
-        <a class="kv-footer-link" href="#disclaimer">Disclaimer</a>
-        <a class="kv-footer-link" href="#cookies-privacy">Cookies &amp; Privacy</a>
+        <a class="kv-footer-link" href="https://github.com/pekuhpee/KVLuzernWeb" rel="noreferrer">GitHub</a>
       </div>
     </div>
-    <div class="kv-container kv-footer-legal">
-      <section id="disclaimer" class="kv-footer-section">
-        <h2>Disclaimer</h2>
-        <p>Dieses Projekt ist ein unabhängiges Schüler:innenprojekt.</p>
-        <p>Es besteht keine offizielle Verbindung zur KV Luzern.</p>
-        <p>Alle Inhalte sind subjektiv und ohne Gewähr.</p>
-      </section>
-      <section id="cookies-privacy" class="kv-footer-section">
-        <h2>Cookies &amp; Privacy</h2>
-        <p>Wir verwenden ausschließlich technisch notwendige Cookies, damit die Website funktioniert.</p>
-        <p>Kein Tracking, keine Analysen, keine Drittanbieter.</p>
-      </section>
-    </div>
+    <div class="kv-container kv-footer-bottom">© {% now "Y" %} KV Luzern Survival Guide</div>
   </footer>
 
   {% include "includes/scripts.html" %}

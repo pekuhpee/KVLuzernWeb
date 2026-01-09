@@ -5,10 +5,10 @@
   <div class="kv-card kv-stack" style="gap:18px;">
     <div class="kv-grid" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;">
       <div class="kv-field"><label for="id_content_type">Typ</label>{{ form.content_type }}</div>
-      <div class="kv-field"><label for="id_category">Kategorie</label><select id="id_category" name="category" class="w-full rounded border border-gray-300 bg-white p-2 text-sm text-gray-900"><option value="">Bitte wählen</option>{% for category in categories %}<option value="{{ category.id }}">{{ category.name }}</option>{% endfor %}</select></div>
-      <div class="kv-field"><label for="id_subcategory">Subkategorie</label><select id="id_subcategory" name="subcategory" class="w-full rounded border border-gray-300 bg-white p-2 text-sm text-gray-900" disabled><option value="">Optional</option>{% for subcategory in subcategories %}<option value="{{ subcategory.id }}" data-category="{{ subcategory.category_id }}">{{ subcategory.name }}</option>{% endfor %}</select></div>
+      <div class="kv-field"><label for="id_category">Kategorie</label><select id="id_category" name="category" class="kv-input"><option value="">Bitte wählen</option>{% for category in categories %}<option value="{{ category.id }}">{{ category.name }}</option>{% endfor %}</select></div>
+      <div class="kv-field"><label for="id_subcategory">Subkategorie</label><select id="id_subcategory" name="subcategory" class="kv-input" disabled><option value="">Optional</option>{% for subcategory in subcategories %}<option value="{{ subcategory.id }}" data-category="{{ subcategory.category_id }}">{{ subcategory.name }}</option>{% endfor %}</select></div>
     </div>
-    <div id="upload-dropzone" class="kv-card" style="border:2px dashed #0F3D32;background:#f8fafb;text-align:center;padding:28px;">
+    <div id="upload-dropzone" class="kv-card kv-dropzone">
       <p style="margin:0;font-weight:600;">Dateien hierher ziehen</p><p class="kv-note" style="margin-top:6px;">oder Dateien auswählen</p>
       <label class="kv-btn kv-btn-primary" style="margin-top:10px;">Dateien auswählen<input id="file-input" type="file" multiple hidden accept=".pdf,.docx,.pptx,.xlsx,.jpg,.jpeg,.png,.zip" /></label>
       <p class="kv-note" style="margin-top:10px;">Max. {{ max_files }} Dateien, {{ max_file_size_mb }} MB pro Datei. Erlaubt: {{ allowed_extensions }}.</p>
@@ -32,7 +32,7 @@ const updateButtons=()=>{btnUpload.disabled=!pending.length;btnDownload.disabled
 btnUpload.addEventListener('click',async()=>{const queue=[...pending];pending=[];updateButtons();for(const file of queue){const row=list.querySelector(`[data-name="${CSS.escape(file.name)}"]`);if(row){await uploadFile(file,row);}}});
 btnCancel.addEventListener('click',()=>{pending=[];list.innerHTML='';errors.textContent='';updateButtons();});
 btnDownload.addEventListener('click',()=>{if(batchId){window.open(`/api/upload-batches/${batchId}/download.zip?upload_token=${token}`,'_blank');}});
-drop.addEventListener('dragover',(e)=>{e.preventDefault();drop.style.background='#eef2f3';});drop.addEventListener('dragleave',()=>{drop.style.background='#f8fafb';});drop.addEventListener('drop',(e)=>{e.preventDefault();drop.style.background='#f8fafb';handle(e.dataTransfer.files);});
+drop.addEventListener('dragover',(e)=>{e.preventDefault();drop.classList.add('is-active');});drop.addEventListener('dragleave',()=>{drop.classList.remove('is-active');});drop.addEventListener('drop',(e)=>{e.preventDefault();drop.classList.remove('is-active');handle(e.dataTransfer.files);});
 input.addEventListener('change',(e)=>{handle(e.target.files);input.value='';});cat.addEventListener('change',updateSub);updateSub();
 </script>
 {% endblock content %}

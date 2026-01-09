@@ -1,7 +1,7 @@
-:root { --kv-primary: #0F3D32; --kv-primary-dark: #0c332a; --kv-accent: #C6A15B; --kv-text: #1f2933; --kv-muted: #6b7280; --kv-border: #e5e7eb; --kv-bg: #ffffff; }
+:root { --kv-primary: #0F3D32; --kv-primary-dark: #0c332a; --kv-accent: #C6A15B; --kv-text: #1f2933; --kv-muted: #6b7280; --kv-border: #e5e7eb; --kv-bg: #ffffff; --kv-surface: #f7f1e6; --kv-surface-strong: #f1e7d6; }
 body.kv-body { margin: 0; font-family: Bahnschrift, "Segoe UI", "Helvetica Neue", Arial, sans-serif; color: var(--kv-text); background: var(--kv-bg); }
 .kv-container { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
-.kv-header { background: var(--kv-primary-dark); border-bottom: 1px solid var(--kv-accent); }
+.kv-header { background: var(--kv-primary-dark); }
 .kv-nav { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 20px 0; flex-wrap: wrap; }
 .kv-brand { font-size: 1.125rem; font-weight: 700; letter-spacing: 0.02em; text-decoration: none; color: #ffffff; }
 .kv-nav-links { display: flex; gap: 20px; flex-wrap: wrap; align-items: center; }
@@ -50,6 +50,11 @@ body.kv-body { margin: 0; font-family: Bahnschrift, "Segoe UI", "Helvetica Neue"
 .kv-field label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 6px; color: var(--kv-text); }
 .kv-form input, .kv-form select, .kv-form textarea { width: 100%; border: 1px solid var(--kv-border); padding: 10px 12px; background: var(--kv-bg); font-size: 0.9rem; color: var(--kv-text); }
 .kv-form input:focus, .kv-form select:focus, .kv-form textarea:focus { outline: none; border-color: var(--kv-accent); box-shadow: 0 0 0 2px rgba(198, 161, 91, 0.2); }
+.kv-form--surface input, .kv-form--surface select, .kv-form--surface textarea { background: var(--kv-surface); }
+.kv-input { width: 100%; border: 1px solid var(--kv-border); padding: 10px 12px; background: var(--kv-surface); font-size: 0.9rem; color: var(--kv-text); border-radius: 4px; }
+.kv-input:focus { outline: none; border-color: var(--kv-accent); box-shadow: 0 0 0 2px rgba(198, 161, 91, 0.2); }
+.kv-dropzone { border: 2px dashed var(--kv-primary); background: var(--kv-surface); text-align: center; padding: 28px; }
+.kv-dropzone.is-active { background: var(--kv-surface-strong); }
 .kv-table-wrapper { overflow-x: auto; }
 .kv-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
 .kv-table th, .kv-table td { padding: 14px 12px; border-bottom: 1px solid var(--kv-border); text-align: left; }
@@ -59,13 +64,11 @@ body.kv-body { margin: 0; font-family: Bahnschrift, "Segoe UI", "Helvetica Neue"
 .kv-link-action:hover, .kv-link-action:focus { color: var(--kv-primary-dark); }
 .kv-muted { color: var(--kv-muted); }
 .kv-note { margin-top: 6px; font-size: 0.75rem; color: var(--kv-muted); }
-.kv-footer { border-top: 1px solid var(--kv-accent); background: #fdfbf7; }
-.kv-footer-top { display: flex; justify-content: space-between; align-items: center; padding: 24px 0 12px; gap: 16px; flex-wrap: wrap; }
-.kv-footer-brand { font-weight: 700; color: var(--kv-primary); }
+.kv-footer { background: #fdfbf7; }
+.kv-footer-top { display: flex; justify-content: space-between; align-items: flex-start; padding: 28px 0 12px; gap: 16px; flex-wrap: wrap; }
+.kv-footer-brand { font-weight: 700; color: var(--kv-primary); font-size: 1rem; }
+.kv-footer-tagline { margin: 6px 0 0; color: var(--kv-muted); font-size: 0.9rem; }
 .kv-footer-links { display: flex; gap: 16px; flex-wrap: wrap; }
-.kv-footer-link { color: var(--kv-primary); text-decoration: none; font-weight: 600; }
+.kv-footer-link { color: var(--kv-primary); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
 .kv-footer-link:hover, .kv-footer-link:focus { color: var(--kv-primary-dark); }
-.kv-footer-legal { display: grid; gap: 16px; padding-bottom: 32px; border-top: 1px solid var(--kv-border); padding-top: 20px; }
-.kv-footer-section h2 { font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--kv-accent); margin: 0 0 8px; }
-.kv-footer-section p { margin: 0 0 6px; color: var(--kv-muted); font-size: 0.9rem; }
-@media (min-width: 768px) { .kv-footer-legal { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.kv-footer-bottom { padding-bottom: 32px; color: var(--kv-muted); font-size: 0.8rem; }

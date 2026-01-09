@@ -9,7 +9,7 @@ class ContentItemUploadForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        input_class = "w-full rounded border border-gray-300 bg-white p-2 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-900 dark:text-white"
+        input_class = "kv-input"
         for name, field in self.fields.items():
             if isinstance(field.widget, forms.Select):
                 field.widget.attrs["class"] = input_class
@@ -44,7 +44,7 @@ class UploadBatchForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        input_class = "w-full rounded border border-gray-300 bg-white p-2 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-900 dark:text-white"
+        input_class = "kv-input"
         self.fields["category"].queryset = Category.objects.filter(is_active=True).order_by("sort_order", "name")
         self.fields["subcategory"].queryset = SubCategory.objects.filter(is_active=True).order_by("sort_order", "name")
         for name, field in self.fields.items():
