@@ -12,10 +12,7 @@ class MemeUploadForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields["title"].widget.attrs.update(
             {
-                "class": (
-                    "w-full rounded border border-gray-300 bg-white p-2 text-sm text-gray-900 "
-                    "dark:border-gray-600 dark:bg-gray-900 dark:text-white"
-                ),
+                "class": "kv-input",
                 "required": "required",
             }
         )
@@ -23,10 +20,7 @@ class MemeUploadForm(forms.ModelForm):
         self.fields["title"].help_text = "Gib deinem Meme einen kurzen Titel."
         self.fields["image"].widget.attrs.update(
             {
-                "class": (
-                    "w-full rounded border border-gray-300 bg-white p-2 text-sm text-gray-900 "
-                    "dark:border-gray-600 dark:bg-gray-900 dark:text-white"
-                )
+                "class": "kv-input"
             }
         )
         self.fields["image"].help_text = "PNG, JPG oder WEBP. Maximal 10 MB."

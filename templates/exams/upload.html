@@ -10,7 +10,7 @@
     </div>
 
     <div class="kv-card">
-      <form method="post" enctype="multipart/form-data" class="kv-form kv-stack">
+      <form method="post" enctype="multipart/form-data" class="kv-form kv-form--surface kv-stack">
         {% csrf_token %}
         {% if form.non_field_errors %}
           <div class="kv-card" style="border-color: #fca5a5; background: #fef2f2;">
