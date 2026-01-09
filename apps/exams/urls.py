@@ -9,6 +9,7 @@ urlpatterns = [
     path("upload/danke", views.upload_thanks, name="upload_thanks"),
     path("upload/batch", views.upload_batch_portal, name="upload_batch"),
     path("d/<int:pk>/download", views.download, name="download"),
+    path("exams/download.zip", views.download_filtered_zip, name="download_filtered_zip"),
     path("uploads/<int:file_id>/download", views.download_upload_file, name="download_upload_file"),
     path("api/upload-batches/", views.create_upload_batch, name="create_upload_batch"),
     path(

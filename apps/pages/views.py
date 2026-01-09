@@ -1,7 +1,8 @@
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 
-from apps.exams.models import ContentItem
+from apps.exams.models import ContentItem, MetaCategory, MetaOption
+from apps.ranking.models import Teacher
 
 from .models import *
 
@@ -24,7 +25,7 @@ def pruefungen(request):
   approved_items = ContentItem.objects.filter(status=ContentItem.Status.APPROVED)
 
   year = request.GET.get("year")
-  content_type = request.GET.get("content_type")
+  content_type = request.GET.get("type")
   subject = request.GET.get("subject")
   teacher = request.GET.get("teacher")
   program = request.GET.get("program")
@@ -47,18 +48,21 @@ def pruefungen(request):
   else:
     items = items.order_by("-created_at")
 
+  meta_labels = {category.key: category.label for category in MetaCategory.objects.filter(is_active=True).order_by("sort_order", "label")}
+
   context = {
     "items": items,
-    "year_options": approved_items.exclude(year__isnull=True).values_list("year", flat=True).distinct().order_by("-year"),
-    "content_type_options": ContentItem.ContentType.choices,
-    "subject_options": approved_items.values_list("subject", flat=True).distinct().order_by("subject"),
-    "teacher_options": approved_items.exclude(teacher="").values_list("teacher", flat=True).distinct().order_by("teacher"),
-    "program_options": approved_items.exclude(program__isnull=True).values_list("program", flat=True).distinct().order_by("program"),
+    "year_options": MetaOption.objects.filter(category__key="year", category__is_active=True, is_active=True).order_by("sort_order", "label"),
+    "content_type_options": MetaOption.objects.filter(category__key="type", category__is_active=True, is_active=True).order_by("sort_order", "label"),
+    "subject_options": MetaOption.objects.filter(category__key="subject", category__is_active=True, is_active=True).order_by("sort_order", "label"),
+    "teacher_options": Teacher.objects.order_by("-active", "name"),
+    "program_options": MetaOption.objects.filter(category__key="program", category__is_active=True, is_active=True).order_by("sort_order", "label"),
     "selected_year": year or "",
     "selected_content_type": content_type or "",
     "selected_subject": subject or "",
     "selected_teacher": teacher or "",
     "selected_program": program or "",
     "selected_sort": sort or "newest",
+    "meta_labels": meta_labels,
   }
   return render(request, "pages/pruefungen.html", context)

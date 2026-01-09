@@ -1,10 +1,30 @@
 import uuid
 from django.conf import settings
 from django.db import models
+from apps.ranking.models import Teacher
 
 
 class ApprovedContentItemManager(models.Manager):
     def get_queryset(self): return super().get_queryset().filter(status=self.model.Status.APPROVED)
+
+
+class MetaCategory(models.Model):
+    key = models.CharField(max_length=40, unique=True)
+    label = models.CharField(max_length=120)
+    sort_order = models.PositiveIntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+    class Meta: ordering = ("sort_order", "label")
+    def __str__(self) -> str: return self.label
+
+
+class MetaOption(models.Model):
+    category = models.ForeignKey(MetaCategory, on_delete=models.CASCADE, related_name="options")
+    value_key = models.CharField(max_length=120)
+    label = models.CharField(max_length=120)
+    sort_order = models.PositiveIntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+    class Meta: unique_together = ("category", "value_key"); ordering = ("sort_order", "label")
+    def __str__(self) -> str: return f"{self.category.label} - {self.label}"
 
 
 class Category(models.Model):
@@ -68,6 +88,11 @@ class UploadBatch(models.Model):
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="upload_batches")
     token = models.UUIDField(default=uuid.uuid4, editable=False)
     content_type = models.CharField(max_length=20, choices=ContentItem.ContentType.choices, default=ContentItem.ContentType.EXAM)
+    type_option = models.ForeignKey(MetaOption, on_delete=models.PROTECT, null=True, blank=True, related_name="upload_batches_type")
+    year_option = models.ForeignKey(MetaOption, on_delete=models.PROTECT, null=True, blank=True, related_name="upload_batches_year")
+    subject_option = models.ForeignKey(MetaOption, on_delete=models.PROTECT, null=True, blank=True, related_name="upload_batches_subject")
+    program_option = models.ForeignKey(MetaOption, on_delete=models.PROTECT, null=True, blank=True, related_name="upload_batches_program")
+    teacher = models.ForeignKey(Teacher, on_delete=models.PROTECT, null=True, blank=True, related_name="upload_batches")
     category = models.ForeignKey(Category, on_delete=models.PROTECT, null=True, blank=True, related_name="upload_batches")
     subcategory = models.ForeignKey(SubCategory, on_delete=models.PROTECT, null=True, blank=True, related_name="upload_batches")
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)

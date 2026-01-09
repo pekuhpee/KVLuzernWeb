@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.utils import timezone
-from apps.exams.models import Category, ContentItem, SubCategory, UploadBatch, UploadFile
+from apps.exams.models import Category, ContentItem, MetaCategory, MetaOption, SubCategory, UploadBatch, UploadFile
 
 
 @admin.action(description="Approve selected")
@@ -41,6 +41,10 @@ class SubCategoryAdmin(admin.ModelAdmin):
     list_filter = ("is_active", "category")
     search_fields = ("name", "slug")
     ordering = ("category", "sort_order", "name")
+
+
+admin.site.register(MetaCategory)
+admin.site.register(MetaOption)
 
 
 @admin.register(UploadBatch)

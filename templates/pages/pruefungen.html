@@ -7,37 +7,40 @@
         <h1 class="kv-title">Prüfungen & Lernstoff</h1>
         <p class="kv-subtitle">Öffentliches Archiv mit freigegebenen Inhalten.</p>
       </div>
-      <a href="{% url 'exams:upload' %}" class="kv-btn kv-btn-primary">Hochladen</a>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;">
+        <a href="{% url 'exams:upload' %}" class="kv-btn kv-btn-primary">Hochladen</a>
+        <a href="{% url 'exams:download_filtered_zip' %}{% if request.GET.urlencode %}?{{ request.GET.urlencode }}{% endif %}" class="kv-btn kv-btn-secondary">Als ZIP herunterladen</a>
+      </div>
     </div>
 
     <div class="kv-card">
       <form method="get" class="kv-form kv-grid">
         <div class="kv-field">
-          <label for="year">Jahr</label>
+          <label for="year">{{ meta_labels.year|default:"Jahr" }}</label>
           <select id="year" name="year">
             <option value="">Alle</option>
             {% for option in year_options %}
-              <option value="{{ option }}" {% if selected_year|stringformat:"s" == option|stringformat:"s" %}selected{% endif %}>{{ option }}</option>
+              <option value="{{ option.value_key }}" {% if selected_year|stringformat:"s" == option.value_key|stringformat:"s" %}selected{% endif %}>{{ option.label }}</option>
             {% endfor %}
           </select>
         </div>
         <div class="kv-field">
-          <label for="content_type">Typ</label>
-          <select id="content_type" name="content_type">
+          <label for="type">{{ meta_labels.type|default:"Typ" }}</label>
+          <select id="type" name="type">
             <option value="">Alle</option>
-            {% for value, label in content_type_options %}
-              <option value="{{ value }}" {% if selected_content_type == value %}selected{% endif %}>
-                {% if value == "EXAM" %}Prüfung{% else %}Lernstoff{% endif %}
+            {% for option in content_type_options %}
+              <option value="{{ option.value_key }}" {% if selected_content_type == option.value_key %}selected{% endif %}>
+                {{ option.label }}
               </option>
             {% endfor %}
           </select>
         </div>
         <div class="kv-field">
-          <label for="subject">Fach</label>
+          <label for="subject">{{ meta_labels.subject|default:"Fach" }}</label>
           <select id="subject" name="subject">
             <option value="">Alle</option>
             {% for option in subject_options %}
-              <option value="{{ option }}" {% if selected_subject == option %}selected{% endif %}>{{ option }}</option>
+              <option value="{{ option.value_key }}" {% if selected_subject == option.value_key %}selected{% endif %}>{{ option.label }}</option>
             {% endfor %}
           </select>
         </div>
@@ -46,24 +49,24 @@
           <select id="teacher" name="teacher">
             <option value="">Alle</option>
             {% for option in teacher_options %}
-              <option value="{{ option }}" {% if selected_teacher == option %}selected{% endif %}>{{ option }}</option>
+              <option value="{{ option.name }}" {% if selected_teacher == option.name %}selected{% endif %}>{{ option.name }}</option>
             {% endfor %}
           </select>
         </div>
         <div class="kv-field">
-          <label for="program">Programm</label>
+          <label for="program">{{ meta_labels.program|default:"Programm" }}</label>
           <select id="program" name="program">
             <option value="">Alle</option>
             {% for option in program_options %}
-              <option value="{{ option }}" {% if selected_program == option %}selected{% endif %}>{{ option }}</option>
+              <option value="{{ option.value_key }}" {% if selected_program == option.value_key %}selected{% endif %}>{{ option.label }}</option>
             {% endfor %}
           </select>
         </div>
         <div class="kv-field">
           <label for="sort">Sortierung</label>
           <select id="sort" name="sort">
-            <option value="newest" {% if selected_sort == "newest" %}selected{% endif %}>Neueste</option>
-            <option value="most_downloaded" {% if selected_sort == "most_downloaded" %}selected{% endif %}>Meist heruntergeladen</option>
+            <option value="newest" {% if selected_sort == "newest" %}selected{% endif %}>Neuste</option>
+            <option value="most_downloaded" {% if selected_sort == "most_downloaded" %}selected{% endif %}>Meiste Downloads</option>
           </select>
         </div>
         <div class="kv-field" style="align-self: end;">

@@ -2,13 +2,18 @@ from django.contrib.auth.models import User
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse
-from apps.exams.models import UploadBatch, UploadFile
+from apps.exams.models import MetaOption, UploadBatch, UploadFile
+from apps.ranking.models import Teacher
 class UploadBatchTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(username="tester", password="pass")
         self.client.force_login(self.user)
+        self.teacher = Teacher.objects.create(name="Test Lehrer")
     def _create_batch(self):
-        response = self.client.post(reverse("exams:create_upload_batch"))
+        option_ids = {f"{key}_option": MetaOption.objects.filter(category__key=key).values_list("id", flat=True).first()
+                      for key in ["type", "year", "subject", "program"]}
+        option_ids["teacher"] = self.teacher.id
+        response = self.client.post(reverse("exams:create_upload_batch"), data=option_ids)
         return response.json()["batch_id"]
     def test_rejects_too_many_files(self):
         batch_id = self._create_batch()
