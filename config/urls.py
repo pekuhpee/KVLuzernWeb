@@ -21,6 +21,7 @@ from django.conf.urls.static import static
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
 
 from apps.memes import views as meme_views
+from config.views import serve_media
 
 urlpatterns = [
     path("", include("apps.pages.urls")),
@@ -44,3 +45,5 @@ urlpatterns = [
 urlpatterns += static(settings.CELERY_LOGS_URL, document_root=settings.CELERY_LOGS_DIR)
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+elif not settings.USE_S3_MEDIA:
+    urlpatterns += [path("media/<path:path>", serve_media, name="serve_media")]

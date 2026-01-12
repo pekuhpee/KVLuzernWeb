@@ -15,8 +15,51 @@ from apps.exams.models import ContentItem, MetaCategory, UploadBatch, UploadFile
 MAX_FILE_SIZE = 15 * 1024 * 1024
 MAX_FILES_PER_BATCH = 10
 ALLOWED_EXTENSIONS = {".pdf", ".docx", ".pptx", ".xlsx", ".jpg", ".jpeg", ".png", ".zip"}
+def _validate_upload_files(incoming_files, existing_count=0):
+    errors = []
+    if existing_count + len(incoming_files) > MAX_FILES_PER_BATCH:
+        errors.append("Too many files in this batch.")
+        return errors
+    for incoming in incoming_files:
+        extension = Path(incoming.name).suffix.lower()
+        if extension not in ALLOWED_EXTENSIONS:
+            errors.append(f"{incoming.name}: unsupported file type.")
+        if incoming.size > MAX_FILE_SIZE:
+            errors.append(f"{incoming.name}: file too large.")
+    return errors
+
+
 def upload(request):
-    form = UploadBatchForm()
+    server_errors = []
+    form = UploadBatchForm(request.POST or None)
+    if request.method == "POST":
+        if not request.FILES:
+            server_errors = ["Bitte mindestens eine Datei auswählen."]
+        elif form.is_valid():
+            batch = form.save(commit=False)
+            if request.user.is_authenticated:
+                batch.owner = request.user
+            batch.save()
+            _store_batch_token(request, batch)
+            incoming_files = request.FILES.getlist("files")
+            server_errors = _validate_upload_files(incoming_files)
+            if not server_errors:
+                for incoming in incoming_files:
+                    UploadFile.objects.create(
+                        batch=batch,
+                        content_type=batch.content_type,
+                        category=batch.category,
+                        subcategory=batch.subcategory,
+                        file=incoming,
+                        original_name=incoming.name,
+                        size=incoming.size,
+                        mime=incoming.content_type or "",
+                    )
+                return redirect("exams:upload_thanks")
+        elif not server_errors:
+            server_errors = [
+                f"{field}: {', '.join(errors)}" for field, errors in form.errors.items()
+            ]
     meta_labels = {
         category.key: category.label
         for category in MetaCategory.objects.filter(is_active=True).order_by("sort_order", "label")
@@ -30,6 +73,7 @@ def upload(request):
             "max_files": MAX_FILES_PER_BATCH,
             "max_file_size_mb": int(MAX_FILE_SIZE / (1024 * 1024)),
             "allowed_extensions": ", ".join(sorted(ALLOWED_EXTENSIONS)),
+            "server_errors": server_errors,
         },
     )
 def upload_thanks(request):
@@ -119,15 +163,7 @@ def upload_batch_files(request, batch_id):
     if not incoming_files:
         return JsonResponse({"error": "No files provided."}, status=400)
     existing_count = batch.files.count()
-    if existing_count + len(incoming_files) > MAX_FILES_PER_BATCH:
-        return JsonResponse({"error": "Too many files in this batch."}, status=400)
-    errors = []
-    for incoming in incoming_files:
-        extension = Path(incoming.name).suffix.lower()
-        if extension not in ALLOWED_EXTENSIONS:
-            errors.append(f"{incoming.name}: unsupported file type.")
-        if incoming.size > MAX_FILE_SIZE:
-            errors.append(f"{incoming.name}: file too large.")
+    errors = _validate_upload_files(incoming_files, existing_count=existing_count)
     if errors:
         return JsonResponse({"errors": errors}, status=400)
     saved_files = []
