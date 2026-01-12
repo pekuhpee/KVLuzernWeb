@@ -26,12 +26,12 @@ class MemeAdmin(admin.ModelAdmin):
 
     @admin.display(description="Preview")
     def preview(self, obj):
-        if not obj.image:
+        if not obj.image_url:
             return "—"
         size = getattr(self, "_preview_size", self._list_preview_size)
         return format_html(
             '<img src="{}" width="{}" style="height: auto;" />',
-            obj.image.url,
+            obj.image_url,
             size,
         )
 

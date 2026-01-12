@@ -97,7 +97,7 @@ def api_memes(request):
         {
             "id": meme.id,
             "title": meme.title,
-            "image_url": meme.image.url if meme.image else "",
+            "image_url": meme.image_url,
             "like_count": meme.like_count,
             "liked_by_me": meme.id in liked_ids,
         }

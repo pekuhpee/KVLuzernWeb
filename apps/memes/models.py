@@ -30,6 +30,15 @@ class Meme(models.Model):
     def __str__(self):
         return f"Meme {self.pk} ({self.status})"
 
+    @property
+    def image_url(self) -> str:
+        if not self.image:
+            return ""
+        storage = self.image.storage
+        if not storage.exists(self.image.name):
+            return ""
+        return self.image.url
+
 
 class MemeLike(models.Model):
     meme = models.ForeignKey(Meme, related_name="likes", on_delete=models.CASCADE)
