@@ -21,3 +21,12 @@ class Profile(models.Model):
 
     def __str__(self):
         return self.user.username
+
+    @property
+    def avatar_url(self) -> str:
+        if not self.avatar:
+            return ""
+        storage = self.avatar.storage
+        if not storage.exists(self.avatar.name):
+            return ""
+        return self.avatar.url

@@ -18,12 +18,14 @@
             class="meme-card"
             data-meme-id="{{ meme.id }}"
             data-meme-title="{{ meme.title|default_if_none:'' }}"
-            data-meme-image="{{ meme.image.url }}"
+            data-meme-image="{{ meme.image_url }}"
             data-like-count="{{ meme.like_count }}"
             data-liked="{% if meme.id in liked_ids %}true{% else %}false{% endif %}"
           >
             <button class="meme-card__button" type="button" data-meme-open>
-              <img class="meme-card__image" src="{{ meme.image.url }}" alt="{{ meme.title|default:'Meme' }}">
+              {% if meme.image_url %}
+                <img class="meme-card__image" src="{{ meme.image_url }}" alt="{{ meme.title|default:'Meme' }}">
+              {% endif %}
             </button>
             <div class="meme-card__body">
               <button class="meme-card__title-button" type="button" data-meme-open>
