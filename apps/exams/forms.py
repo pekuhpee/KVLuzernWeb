@@ -46,6 +46,13 @@ class UploadBatchForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         input_class = "kv-input"
+        required_labels = {
+            "type_option": "Typ",
+            "year_option": "Jahr",
+            "subject_option": "Fach",
+            "program_option": "Programm",
+            "teacher": "Lehrer",
+        }
         option_fields = {
             "type_option": "type",
             "year_option": "year",
@@ -53,12 +60,18 @@ class UploadBatchForm(forms.ModelForm):
             "program_option": "program",
         }
         for field_name, category_key in option_fields.items():
-            self.fields[field_name].queryset = MetaOption.objects.filter(
+            field = self.fields[field_name]
+            field.queryset = MetaOption.objects.filter(
                 category__key=category_key,
                 category__is_active=True,
                 is_active=True,
             ).order_by("sort_order", "label")
-        self.fields["teacher"].queryset = Teacher.objects.order_by("-active", "name")
+            field.required = True
+            field.error_messages["required"] = f"Bitte {required_labels[field_name]} wählen."
+        teacher_field = self.fields["teacher"]
+        teacher_field.queryset = Teacher.objects.order_by("-active", "name")
+        teacher_field.required = True
+        teacher_field.error_messages["required"] = f"Bitte {required_labels['teacher']} wählen."
         for name, field in self.fields.items():
             if isinstance(field.widget, forms.Select):
                 field.widget.attrs["class"] = input_class
