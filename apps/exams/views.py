@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 import shutil
 import tempfile
@@ -15,6 +16,7 @@ from apps.exams.models import ContentItem, MetaCategory, UploadBatch, UploadFile
 MAX_FILE_SIZE = 15 * 1024 * 1024
 MAX_FILES_PER_BATCH = 10
 ALLOWED_EXTENSIONS = {".pdf", ".docx", ".pptx", ".xlsx", ".jpg", ".jpeg", ".png", ".zip"}
+logger = logging.getLogger(__name__)
 def _validate_upload_files(incoming_files, existing_count=0):
     errors = []
     if existing_count + len(incoming_files) > MAX_FILES_PER_BATCH:
@@ -147,11 +149,18 @@ def create_upload_batch(request):
     form = UploadBatchForm(payload)
     if not form.is_valid():
         return JsonResponse({"errors": form.errors}, status=400)
-    batch = form.save(commit=False)
-    batch.context = payload.get("context", "")
-    if request.user.is_authenticated:
-        batch.owner = request.user
-    batch.save()
+    try:
+        batch = form.save(commit=False)
+        batch.context = payload.get("context", "")
+        if request.user.is_authenticated:
+            batch.owner = request.user
+        batch.save()
+    except Exception:
+        logger.exception("Failed to create upload batch.")
+        return JsonResponse(
+            {"detail": "Upload-Batch konnte nicht erstellt werden. Bitte Eingaben prüfen."},
+            status=500,
+        )
     _store_batch_token(request, batch)
     return JsonResponse({"batch_id": batch.id, "upload_token": str(batch.token)}, status=201)
 @require_http_methods(["POST"])
