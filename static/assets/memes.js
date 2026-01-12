@@ -6,14 +6,21 @@
   const setLikeButton = (button, meme) => { button.textContent = likeLabel(meme.liked); button.disabled = meme.liked; };
   const getCookie = (name) => document.cookie.split("; ").find((row) => row.startsWith(`${name}=`))?.split("=")[1] || "";
   const collectMemes = () => {
-    state.memes = Array.from(grid.querySelectorAll("[data-meme-id]")).map((card) => ({
-      id: Number(card.dataset.memeId),
-      title: card.dataset.memeTitle || "",
-      imageUrl: card.dataset.memeImage || "",
-      likeCount: Number(card.dataset.likeCount || 0),
-      liked: card.dataset.liked === "true",
-      card,
-    }));
+    state.memes = Array.from(grid.querySelectorAll("[data-meme-id]")).map((card) => {
+      const image = card.querySelector(".meme-card__image");
+      const imageUrl = card.dataset.memeImage || image?.getAttribute("src") || "";
+      if (image && imageUrl && image.getAttribute("src") !== imageUrl) {
+        image.setAttribute("src", imageUrl);
+      }
+      return {
+        id: Number(card.dataset.memeId),
+        title: card.dataset.memeTitle || "",
+        imageUrl,
+        likeCount: Number(card.dataset.likeCount || 0),
+        liked: card.dataset.liked === "true",
+        card,
+      };
+    });
   };
   const updateCard = (meme) => {
     const likeButton = meme.card.querySelector(".meme-like__button");
