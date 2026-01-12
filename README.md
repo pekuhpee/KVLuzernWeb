@@ -60,6 +60,12 @@ A common set of features is provided out-of-the-box: **API, DataTables, Charts, 
 - Attach a persistent disk at `/var/data`.
 - Set `RENDER_DISK_PATH=/var/data` so Django stores uploads at `/var/data/media`.
 
+### S3 media uploads (optional)
+
+- Set `USE_S3_MEDIA=true` to store uploads in S3-compatible storage.
+- Required: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_STORAGE_BUCKET_NAME`.
+- Optional: `AWS_S3_REGION_NAME`, `AWS_S3_ENDPOINT_URL`, `AWS_S3_CUSTOM_DOMAIN`.
+
 ## [Rocket PRO Version](https://app-generator.dev/product/rocket-pro/django/)
 
 > The premium version provides more features, priority on support, and is more often updated - [Live Demo](https://rocket-django-pro.onrender.com/).

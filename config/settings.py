@@ -186,7 +186,11 @@ STATICFILES_DIRS = (
 )
 
 MEDIA_URL = "/media/"
-MEDIA_ROOT = os.environ.get("MEDIA_ROOT", str(BASE_DIR / "media"))
+render_disk_path = os.environ.get("RENDER_DISK_PATH")
+default_media_root = (
+    Path(render_disk_path) / "media" if render_disk_path else BASE_DIR / "media"
+)
+MEDIA_ROOT = Path(os.environ.get("MEDIA_ROOT", str(default_media_root)))
 
 USE_S3_MEDIA = str2bool(os.environ.get("USE_S3_MEDIA", "false"))
 
@@ -212,8 +216,11 @@ if USE_S3_MEDIA:
     }
 
     media_domain = os.environ.get("AWS_S3_CUSTOM_DOMAIN")
-    if not media_domain and AWS_S3_ENDPOINT_URL and AWS_STORAGE_BUCKET_NAME:
-        media_domain = f"{AWS_S3_ENDPOINT_URL.rstrip('/')}/{AWS_STORAGE_BUCKET_NAME}"
+    if not media_domain and AWS_STORAGE_BUCKET_NAME:
+        if AWS_S3_ENDPOINT_URL:
+            media_domain = f"{AWS_S3_ENDPOINT_URL.rstrip('/')}/{AWS_STORAGE_BUCKET_NAME}"
+        else:
+            media_domain = f"https://{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com"
     if media_domain:
         MEDIA_URL = f"{media_domain.rstrip('/')}/"
 
