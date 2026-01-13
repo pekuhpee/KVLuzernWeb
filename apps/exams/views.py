@@ -1,8 +1,6 @@
 import json
 import logging
 import os
-import shutil
-import tempfile
 import zipfile
 from pathlib import Path
 
@@ -11,11 +9,14 @@ from django.http import FileResponse, Http404, JsonResponse, StreamingHttpRespon
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.text import get_valid_filename
 from django.views.decorators.http import require_http_methods
+import zipstream
 from apps.exams.forms import UploadBatchForm
 from apps.exams.models import ContentItem, MetaCategory, UploadBatch, UploadFile
 MAX_FILE_SIZE = 15 * 1024 * 1024
 MAX_FILES_PER_BATCH = 10
 ALLOWED_EXTENSIONS = {".pdf", ".docx", ".pptx", ".xlsx", ".jpg", ".jpeg", ".png", ".zip"}
+ALLOWED_MIME_TYPES = {".pdf": {"application/pdf"}, ".docx": {"application/vnd.openxmlformats-officedocument.wordprocessingml.document"}, ".pptx": {"application/vnd.openxmlformats-officedocument.presentationml.presentation"}, ".xlsx": {"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}, ".jpg": {"image/jpeg"}, ".jpeg": {"image/jpeg"}, ".png": {"image/png"}, ".zip": {"application/zip", "application/x-zip-compressed"}}
+BLOCKED_ZIP_EXTENSIONS = {".exe", ".bat", ".cmd", ".ps1", ".js", ".dll", ".sh"}
 logger = logging.getLogger(__name__)
 def _validate_upload_files(incoming_files, existing_count=0):
     errors = []
@@ -28,6 +29,27 @@ def _validate_upload_files(incoming_files, existing_count=0):
             errors.append(f"{incoming.name}: unsupported file type.")
         if incoming.size > MAX_FILE_SIZE:
             errors.append(f"{incoming.name}: file too large.")
+        content_type = (incoming.content_type or "").lower()
+        if extension in ALLOWED_MIME_TYPES and content_type not in ALLOWED_MIME_TYPES[extension]:
+            errors.append(f"{incoming.name}: invalid file type.")
+        if extension == ".zip":
+            try:
+                incoming.seek(0)
+                with zipfile.ZipFile(incoming) as archive:
+                    for member in archive.infolist():
+                        if member.is_dir():
+                            continue
+                        member_path = Path(member.filename)
+                        if member_path.is_absolute() or ".." in member_path.parts:
+                            errors.append(f"{incoming.name}: ZIP enthält ungültige Pfade.")
+                            break
+                        if member_path.suffix.lower() in BLOCKED_ZIP_EXTENSIONS:
+                            errors.append(f"{incoming.name}: ZIP enthält ausführbare Dateien.")
+                            break
+            except zipfile.BadZipFile:
+                errors.append(f"{incoming.name}: ZIP-Datei ist beschädigt.")
+            finally:
+                incoming.seek(0)
     return errors
 
 
@@ -35,17 +57,17 @@ def upload(request):
     server_errors = []
     form = UploadBatchForm(request.POST or None)
     if request.method == "POST":
-        if not request.FILES:
+        incoming_files = request.FILES.getlist("files")
+        if not incoming_files:
             server_errors = ["Bitte mindestens eine Datei auswählen."]
         elif form.is_valid():
-            batch = form.save(commit=False)
-            if request.user.is_authenticated:
-                batch.owner = request.user
-            batch.save()
-            _store_batch_token(request, batch)
-            incoming_files = request.FILES.getlist("files")
             server_errors = _validate_upload_files(incoming_files)
             if not server_errors:
+                batch = form.save(commit=False)
+                if request.user.is_authenticated:
+                    batch.owner = request.user
+                batch.save()
+                _store_batch_token(request, batch)
                 for incoming in incoming_files:
                     UploadFile.objects.create(
                         batch=batch,
@@ -57,7 +79,7 @@ def upload(request):
                         size=incoming.size,
                         mime=incoming.content_type or "",
                     )
-                return redirect("exams:upload_thanks")
+                return redirect("exams:upload_success", batch_id=batch.id)
         elif not server_errors:
             server_errors = [
                 f"{field}: {', '.join(errors)}" for field, errors in form.errors.items()
@@ -80,6 +102,13 @@ def upload(request):
     )
 def upload_thanks(request):
     return render(request, "exams/upload_thanks.html")
+
+
+def upload_success(request, batch_id):
+    batch = get_object_or_404(UploadBatch.objects.select_related("type_option", "year_option", "subject_option", "program_option", "teacher"), pk=batch_id)
+    if not _has_batch_access(request, batch):
+        raise Http404("Not found.")
+    return render(request, "exams/upload_thanks.html", {"batch": batch, "file_count": batch.files.count()})
 def download(request, pk):
     content_item = get_object_or_404(
         ContentItem,
@@ -96,7 +125,9 @@ def download(request, pk):
         file_handle = content_item.file.open("rb")
     except (FileNotFoundError, OSError):
         raise Http404("File not found.")
-    return FileResponse(file_handle, as_attachment=True, filename=os.path.basename(content_item.file.name))
+    response = FileResponse(file_handle, as_attachment=True, filename=os.path.basename(content_item.file.name))
+    response["X-Content-Type-Options"] = "nosniff"
+    return response
 def download_upload_file(request, file_id):
     upload_file = get_object_or_404(
         UploadFile,
@@ -112,7 +143,9 @@ def download_upload_file(request, file_id):
         file_handle = upload_file.file.open("rb")
     except (FileNotFoundError, OSError):
         raise Http404("File not found.")
-    return FileResponse(file_handle, as_attachment=True, filename=os.path.basename(upload_file.file.name))
+    response = FileResponse(file_handle, as_attachment=True, filename=os.path.basename(upload_file.file.name))
+    response["X-Content-Type-Options"] = "nosniff"
+    return response
 def upload_batch_portal(request):
     return redirect("exams:upload")
 def _sanitize_zip_name(filename, used_names):
@@ -124,6 +157,30 @@ def _sanitize_zip_name(filename, used_names):
         counter += 1
     used_names.add(safe_name)
     return safe_name
+
+
+def _iter_file_chunks(file_field):
+    with file_field.open("rb") as file_handle:
+        for chunk in file_handle.chunks():
+            yield chunk
+
+
+def build_zip_response(file_items, filename):
+    used_names = set()
+    archive = zipstream.ZipFile(mode="w", compression=zipstream.ZIP_DEFLATED)
+    for index, upload_file in enumerate(file_items, start=1):
+        if not upload_file.file:
+            continue
+        sanitized = _sanitize_zip_name(upload_file.original_name, used_names)
+        name = f"{index:02d}_{sanitized}"
+        try:
+            archive.write_iter(name, _iter_file_chunks(upload_file.file))
+        except (FileNotFoundError, OSError):
+            continue
+    response = StreamingHttpResponse(archive, content_type="application/zip")
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    response["X-Content-Type-Options"] = "nosniff"
+    return response
 def _store_batch_token(request, batch):
     tokens = request.session.get("upload_batch_tokens", {})
     tokens[str(batch.id)] = str(batch.token)
@@ -202,76 +259,29 @@ def download_upload_batch(request, batch_id):
     batch = get_object_or_404(UploadBatch, pk=batch_id)
     if not _has_batch_access(request, batch):
         return JsonResponse({"error": "Unauthorized."}, status=403)
-    used_names = set()
-    temp_file = tempfile.SpooledTemporaryFile(max_size=10 * 1024 * 1024, mode="w+b")
-    with zipfile.ZipFile(temp_file, mode="w", compression=zipfile.ZIP_DEFLATED) as archive:
-        for index, upload_file in enumerate(batch.files.all().order_by("created_at", "id").iterator(), start=1):
-            sanitized = _sanitize_zip_name(upload_file.original_name, used_names)
-            name = f"{index:02d}_{sanitized}"
-            with archive.open(name, "w") as dest, upload_file.file.open("rb") as src:
-                shutil.copyfileobj(src, dest, length=8192)
-    temp_file.seek(0)
-    def stream():
-        while True:
-            chunk = temp_file.read(8192)
-            if not chunk:
-                break
-            yield chunk
-        temp_file.close()
-
-    response = StreamingHttpResponse(stream(), content_type="application/zip")
-    response["Content-Disposition"] = f'attachment; filename="batch-{batch_id}.zip"'
-    return response
+    return build_zip_response(
+        batch.files.all().order_by("created_at", "id").iterator(),
+        f"batch-{batch_id}.zip",
+    )
 
 
 @require_http_methods(["GET"])
 def download_filtered_zip(request):
-    approved_items = ContentItem.objects.filter(status=ContentItem.Status.APPROVED).exclude(file="")
+    approved_batches = UploadBatch.objects.filter(status=UploadBatch.Status.APPROVED)
     type_key = request.GET.get("type"); year_key = request.GET.get("year"); subject_key = request.GET.get("subject")
-    teacher_key = request.GET.get("teacher"); program_key = request.GET.get("program"); sort = request.GET.get("sort", "newest")
-    items = approved_items
+    teacher_key = request.GET.get("teacher"); program_key = request.GET.get("program")
+    batches = approved_batches
     if type_key:
-        items = items.filter(content_type=type_key)
+        batches = batches.filter(content_type=type_key)
     if year_key:
-        try:
-            items = items.filter(year=int(year_key))
-        except ValueError:
-            items = items.none()
+        batches = batches.filter(year_option__value_key=year_key)
     if subject_key:
-        items = items.filter(subject=subject_key)
+        batches = batches.filter(subject_option__value_key=subject_key)
     if teacher_key:
-        items = items.filter(teacher=teacher_key)
+        batches = batches.filter(teacher__name=teacher_key)
     if program_key:
-        items = items.filter(program=program_key)
+        batches = batches.filter(program_option__value_key=program_key)
 
-    if sort == "most_downloaded":
-        items = items.order_by("-download_count", "-created_at")
-    else:
-        items = items.order_by("-created_at")
-    used_names = set()
-    temp_file = tempfile.SpooledTemporaryFile(max_size=10 * 1024 * 1024, mode="w+b")
-    with zipfile.ZipFile(temp_file, mode="w", compression=zipfile.ZIP_DEFLATED) as archive:
-        for index, content_item in enumerate(items.iterator(), start=1):
-            if not content_item.file:
-                continue
-            original_name = os.path.basename(content_item.file.name) or f"item-{content_item.pk}.dat"
-            sanitized = _sanitize_zip_name(original_name, used_names)
-            name = f"{index:03d}_{sanitized}"
-            try:
-                with archive.open(name, "w") as dest, content_item.file.open("rb") as src:
-                    shutil.copyfileobj(src, dest, length=8192)
-            except (FileNotFoundError, OSError):
-                continue
-    temp_file.seek(0)
-
-    def stream():
-        while True:
-            chunk = temp_file.read(8192)
-            if not chunk:
-                break
-            yield chunk
-        temp_file.close()
-
-    response = StreamingHttpResponse(stream(), content_type="application/zip")
-    response["Content-Disposition"] = 'attachment; filename="pruefungen.zip"'
-    return response
+    batches = batches.order_by("-created_at")
+    files = UploadFile.objects.filter(batch__in=batches).order_by("batch__created_at", "id")
+    return build_zip_response(files.iterator(), "pruefungen.zip")

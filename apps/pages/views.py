@@ -1,7 +1,7 @@
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 
-from apps.exams.models import ContentItem, MetaCategory, MetaOption
+from apps.exams.models import MetaCategory, MetaOption, UploadBatch
 from apps.ranking.models import Teacher
 
 from .models import *
@@ -22,36 +22,38 @@ def starter(request):
 
 def pruefungen(request):
 
-  approved_items = ContentItem.objects.filter(status=ContentItem.Status.APPROVED)
+  approved_batches = UploadBatch.objects.filter(status=UploadBatch.Status.APPROVED)
 
   year = request.GET.get("year")
   content_type = request.GET.get("type")
   subject = request.GET.get("subject")
   teacher = request.GET.get("teacher")
   program = request.GET.get("program")
-  sort = request.GET.get("sort", "newest")
 
-  items = approved_items
+  batches = approved_batches
   if year:
-    items = items.filter(year=year)
+    batches = batches.filter(year_option__value_key=year)
   if content_type:
-    items = items.filter(content_type=content_type)
+    batches = batches.filter(content_type=content_type)
   if subject:
-    items = items.filter(subject=subject)
+    batches = batches.filter(subject_option__value_key=subject)
   if teacher:
-    items = items.filter(teacher=teacher)
+    batches = batches.filter(teacher__name=teacher)
   if program:
-    items = items.filter(program=program)
+    batches = batches.filter(program_option__value_key=program)
 
-  if sort == "most_downloaded":
-    items = items.order_by("-download_count", "-created_at")
-  else:
-    items = items.order_by("-created_at")
+  batches = batches.order_by("-created_at")
 
   meta_labels = {category.key: category.label for category in MetaCategory.objects.filter(is_active=True).order_by("sort_order", "label")}
 
   context = {
-    "items": items,
+    "batches": batches.select_related(
+      "type_option",
+      "year_option",
+      "subject_option",
+      "program_option",
+      "teacher",
+    ).prefetch_related("files"),
     "year_options": MetaOption.objects.filter(category__key="year", category__is_active=True, is_active=True).order_by("sort_order", "label"),
     "content_type_options": MetaOption.objects.filter(category__key="type", category__is_active=True, is_active=True).order_by("sort_order", "label"),
     "subject_options": MetaOption.objects.filter(category__key="subject", category__is_active=True, is_active=True).order_by("sort_order", "label"),
@@ -62,7 +64,6 @@ def pruefungen(request):
     "selected_subject": subject or "",
     "selected_teacher": teacher or "",
     "selected_program": program or "",
-    "selected_sort": sort or "newest",
     "meta_labels": meta_labels,
   }
   return render(request, "pages/pruefungen.html", context)

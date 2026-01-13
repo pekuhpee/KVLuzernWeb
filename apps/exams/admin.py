@@ -1,6 +1,10 @@
 from django.contrib import admin
+from django.shortcuts import get_object_or_404
+from django.urls import path, reverse
 from django.utils import timezone
+from django.utils.html import format_html
 from apps.exams.models import Category, ContentItem, MetaCategory, MetaOption, SubCategory, UploadBatch, UploadFile
+from apps.exams.views import build_zip_response
 
 
 @admin.action(description="Approve selected")
@@ -47,12 +51,48 @@ admin.site.register(MetaCategory)
 admin.site.register(MetaOption)
 
 
+class UploadFileInline(admin.TabularInline):
+    model = UploadFile
+    extra = 0
+    fields = ("original_name", "size", "mime", "created_at")
+    readonly_fields = fields
+
+
 @admin.register(UploadBatch)
 class UploadBatchAdmin(admin.ModelAdmin):
-    list_display = ("id", "content_type", "category", "subcategory", "status", "created_at")
-    list_filter = ("status", "content_type", "category", "subcategory")
+    list_display = ("id", "created_at", "status", "type_option", "year_option", "subject_option", "teacher", "program_option", "file_count")
+    list_filter = ("status", "content_type", "type_option", "year_option", "subject_option", "program_option", "teacher", "created_at")
     search_fields = ("id", "context")
     actions = (approve_batches, reject_batches)
+    readonly_fields = ("zip_download_link",)
+    inlines = (UploadFileInline,)
+
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            path(
+                "<int:batch_id>/download-zip/",
+                self.admin_site.admin_view(self.download_zip),
+                name="exams_uploadbatch_zip",
+            ),
+        ]
+        return custom_urls + urls
+
+    @admin.display(description="Dateien")
+    def file_count(self, obj):
+        return obj.files.count()
+
+    @admin.display(description="ZIP herunterladen")
+    def zip_download_link(self, obj):
+        url = reverse("admin:exams_uploadbatch_zip", args=[obj.pk])
+        return format_html('<a class="button" href="{}">ZIP herunterladen</a>', url)
+
+    def download_zip(self, request, batch_id):
+        batch = get_object_or_404(UploadBatch, pk=batch_id)
+        return build_zip_response(
+            batch.files.all().order_by("created_at", "id").iterator(),
+            f"batch-{batch_id}.zip",
+        )
 
 
 @admin.register(UploadFile)
