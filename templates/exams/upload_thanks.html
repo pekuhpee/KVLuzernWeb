@@ -7,9 +7,23 @@
       <p class="kv-subtitle">
         Danke! Dein Upload wurde eingereicht und wird zuerst geprüft.
       </p>
+      {% if batch %}
+        <div class="kv-stack" style="gap:6px;margin-top:16px;">
+          <div><strong>Typ:</strong> {{ batch.type_option.label|default:batch.get_content_type_display }}</div>
+          <div><strong>Jahr:</strong> {{ batch.year_option.label|default:"-" }}</div>
+          <div><strong>Fach:</strong> {{ batch.subject_option.label|default:"-" }}</div>
+          <div><strong>Programm:</strong> {{ batch.program_option.label|default:"-" }}</div>
+          <div><strong>Lehrperson:</strong> {{ batch.teacher.name|default:"-" }}</div>
+          <div><strong>Dateien:</strong> {{ file_count }}</div>
+        </div>
+        <p class="kv-note" style="margin-top:12px;">Erscheint erst nach Freigabe.</p>
+      {% endif %}
       <div style="margin-top: 24px;">
         <a href="{% url 'pruefungen' %}" class="kv-btn kv-btn-primary">
-          Zurück zu Prüfungen
+          Zu Prüfungen
+        </a>
+        <a href="{% url 'exams:upload' %}" class="kv-btn kv-btn-secondary">
+          Weiteren Beitrag hochladen
         </a>
       </div>
     </div>
