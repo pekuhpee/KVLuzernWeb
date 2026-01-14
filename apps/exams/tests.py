@@ -47,7 +47,7 @@ class UploadBatchTests(TestCase):
         )
         self.assertEqual(response.status_code, 400)
     def test_download_zip_headers(self):
-        batch = UploadBatch.objects.create(owner=self.user)
+        batch = UploadBatch.objects.create(owner=self.user, status=UploadBatch.Status.APPROVED)
         upload_file = SimpleUploadedFile("test.txt", b"hello", content_type="text/plain")
         UploadFile.objects.create(
             batch=batch,

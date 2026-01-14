@@ -10,6 +10,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.text import get_valid_filename
 from django.views.decorators.http import require_http_methods
 import zipstream
+from django.core.files.storage import default_storage
 from apps.exams.forms import UploadBatchForm
 from apps.exams.models import ContentItem, MetaCategory, UploadBatch, UploadFile
 MAX_FILE_SIZE = 15 * 1024 * 1024
@@ -148,38 +149,82 @@ def download_upload_file(request, file_id):
     return response
 def upload_batch_portal(request):
     return redirect("exams:upload")
-def _sanitize_zip_name(filename, used_names):
-    safe_name = get_valid_filename(Path(filename).name) or "file"
-    base = safe_name
-    counter = 1
-    while safe_name in used_names:
-        safe_name = f"{Path(base).stem}-{counter}{Path(base).suffix}"
-        counter += 1
-    used_names.add(safe_name)
+def _sanitize_zip_name(filename):
+    base_name = Path(filename or "").name
+    safe_name = get_valid_filename(base_name) or "file"
+    safe_name = safe_name.replace("..", "").strip()
+    if safe_name in {"", ".", ".."}:
+        safe_name = "file"
     return safe_name
 
 
-def _iter_file_chunks(file_field):
+def _unique_zip_path(prefix, filename, used_paths):
+    candidate = f"{prefix}/{filename}"
+    if candidate not in used_paths:
+        used_paths.add(candidate)
+        return candidate
+    stem = Path(filename).stem or "file"
+    suffix = Path(filename).suffix
+    counter = 1
+    while True:
+        candidate = f"{prefix}/{stem}-{counter}{suffix}"
+        if candidate not in used_paths:
+            used_paths.add(candidate)
+            return candidate
+        counter += 1
+
+
+def _iter_storage_chunks(file_name):
     try:
-        with file_field.open("rb") as file_handle:
-            for chunk in file_handle.chunks():
+        file_handle = default_storage.open(file_name, "rb")
+    except (FileNotFoundError, OSError, ValueError):
+        logger.warning("Failed to open file for ZIP: %s", file_name)
+        return None
+    if hasattr(file_handle, "chunks"):
+        def generator():
+            try:
+                for chunk in file_handle.chunks():
+                    yield chunk
+            finally:
+                try:
+                    file_handle.close()
+                except Exception:
+                    logger.warning("Failed to close file handle for ZIP: %s", file_name)
+        return generator()
+    def generator():
+        try:
+            while True:
+                chunk = file_handle.read(8192)
+                if not chunk:
+                    break
                 yield chunk
-    except (FileNotFoundError, OSError):
-        return
+        finally:
+            try:
+                file_handle.close()
+            except Exception:
+                logger.warning("Failed to close file handle for ZIP: %s", file_name)
+    return generator()
 
 
 def build_zip_response(file_items, filename):
-    used_names = set()
+    used_paths = set()
     archive = zipstream.ZipFile(mode="w", compression=zipstream.ZIP_DEFLATED)
-    for index, upload_file in enumerate(file_items, start=1):
-        if not upload_file.file:
+    added_files = 0
+    for upload_file in file_items:
+        if not upload_file.file or not upload_file.file.name:
             continue
-        storage = upload_file.file.storage
-        if not storage.exists(upload_file.file.name):
+        if not default_storage.exists(upload_file.file.name):
             continue
-        sanitized = _sanitize_zip_name(upload_file.original_name, used_names)
-        name = f"{index:02d}_{sanitized}"
-        archive.write_iter(name, _iter_file_chunks(upload_file.file))
+        sanitized = _sanitize_zip_name(upload_file.original_name)
+        prefix = f"submission_{upload_file.batch_id}"
+        zip_path = _unique_zip_path(prefix, sanitized, used_paths)
+        chunk_iter = _iter_storage_chunks(upload_file.file.name)
+        if not chunk_iter:
+            continue
+        archive.write_iter(zip_path, chunk_iter)
+        added_files += 1
+    if added_files == 0:
+        raise Http404("No files available for download.")
     response = StreamingHttpResponse(archive, content_type="application/zip")
     response["Content-Disposition"] = f'attachment; filename="{filename}"'
     response["X-Content-Type-Options"] = "nosniff"
@@ -259,9 +304,11 @@ def delete_upload_file(request, file_id):
     return JsonResponse({"deleted": True})
 @require_http_methods(["GET"])
 def download_upload_batch(request, batch_id):
-    batch = get_object_or_404(UploadBatch, pk=batch_id)
-    if not _has_batch_access(request, batch):
-        return JsonResponse({"error": "Unauthorized."}, status=403)
+    batch = get_object_or_404(
+        UploadBatch,
+        pk=batch_id,
+        status=UploadBatch.Status.APPROVED,
+    )
     UploadBatch.objects.filter(pk=batch_id).update(download_count=F("download_count") + 1)
     return build_zip_response(
         batch.files.all().order_by("created_at", "id").iterator(),
