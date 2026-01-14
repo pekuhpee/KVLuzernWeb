@@ -1,5 +1,7 @@
 from django import forms
+from django.core.exceptions import ValidationError
 from apps.exams.models import ContentItem, MetaOption, UploadBatch
+from apps.exams.security import ALLOWED_EXTENSIONS, MAX_FILE_SIZE, validate_uploaded_file
 from apps.ranking.models import Teacher
 
 
@@ -18,23 +20,18 @@ class ContentItemUploadForm(forms.ModelForm):
                 field.widget.attrs["class"] = input_class
             else:
                 field.widget.attrs["class"] = input_class
-        self.fields["file"].help_text = "PDF, PNG oder JPG. Maximal 25 MB."
+        allowed = ", ".join(sorted(f".{ext}" for ext in ALLOWED_EXTENSIONS))
+        max_mb = int(MAX_FILE_SIZE / (1024 * 1024))
+        self.fields["file"].help_text = f"Erlaubt: {allowed}. Maximal {max_mb} MB."
 
     def clean_file(self):
         file = self.cleaned_data.get("file")
         if not file:
             return file
-        allowed_extensions = {"pdf", "png", "jpg", "jpeg"}
-        allowed_content_types = {"application/pdf", "image/png", "image/jpeg"}
-        extension = file.name.rsplit(".", 1)[-1].lower() if "." in file.name else ""
-        if extension not in allowed_extensions:
-            raise forms.ValidationError("Nur PDF, PNG oder JPG-Dateien sind erlaubt.")
-        content_type = getattr(file, "content_type", "")
-        if content_type and content_type not in allowed_content_types:
-            raise forms.ValidationError("Der Dateityp stimmt nicht mit PDF, PNG oder JPG überein.")
-        max_size_mb = 25
-        if file.size > max_size_mb * 1024 * 1024:
-            raise forms.ValidationError("Die Datei ist zu gross. Maximal 25 MB erlaubt.")
+        try:
+            validate_uploaded_file(file)
+        except ValidationError as exc:
+            raise forms.ValidationError(exc.messages) from exc
         return file
 
 
