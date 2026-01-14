@@ -1,5 +1,6 @@
 import uuid
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.db import models
 from apps.ranking.models import Teacher
 
@@ -99,6 +100,21 @@ class UploadBatch(models.Model):
     context = models.CharField(max_length=200, blank=True)
     download_count = models.PositiveIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
+    def clean(self):
+        super().clean()
+        errors = {}
+        option_groups = {
+            "type_option": "type",
+            "year_option": "year",
+            "subject_option": "subject",
+            "program_option": "program",
+        }
+        for field_name, expected_key in option_groups.items():
+            option = getattr(self, field_name)
+            if option and option.category.key != expected_key:
+                errors[field_name] = f"Ungültige Auswahl für {expected_key}."
+        if errors:
+            raise ValidationError(errors)
     def __str__(self) -> str: return f"Batch {self.pk} ({self.owner})"
 
 

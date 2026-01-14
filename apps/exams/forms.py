@@ -82,7 +82,7 @@ class UploadBatchForm(forms.ModelForm):
     def save(self, commit=True):
         instance = super().save(commit=False)
         type_option = self.cleaned_data.get("type_option")
-        if type_option and type_option.value_key in dict(ContentItem.ContentType.choices):
+        if type_option:
             instance.content_type = type_option.value_key
         if commit:
             instance.save()

@@ -323,7 +323,7 @@ def download_filtered_zip(request):
     teacher_key = request.GET.get("teacher"); program_key = request.GET.get("program")
     batches = approved_batches
     if type_key:
-        batches = batches.filter(content_type=type_key)
+        batches = batches.filter(type_option__value_key=type_key)
     if year_key:
         batches = batches.filter(year_option__value_key=year_key)
     if subject_key:
