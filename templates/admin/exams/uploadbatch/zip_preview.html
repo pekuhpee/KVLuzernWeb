@@ -1,0 +1,50 @@
+{% extends "admin/base_site.html" %}
+{% load humanize i18n %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+  <a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
+  &rsaquo; <a href="{% url 'admin:exams_uploadbatch_changelist' %}">Uploaded batches</a>
+  &rsaquo; <a href="{% url 'admin:exams_uploadbatch_change' batch.pk %}">{{ batch }}</a>
+  &rsaquo; {% trans "ZIP ansehen" %}
+</div>
+{% endblock %}
+
+{% block content %}
+<h1>{% trans "ZIP ansehen" %}</h1>
+<p>
+  <a class="button" href="{% url 'admin:exams_uploadbatch_zip' batch.pk %}">{% trans "ZIP herunterladen" %}</a>
+  <a class="button" href="{% url 'admin:exams_uploadbatch_change' batch.pk %}">{% trans "Zurück zum Batch" %}</a>
+</p>
+
+<table class="adminlist">
+  <thead>
+    <tr>
+      <th>{% trans "Dateiname" %}</th>
+      <th>{% trans "Größe" %}</th>
+      <th>{% trans "Content-Type" %}</th>
+      <th>{% trans "Download" %}</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for file in files %}
+      <tr>
+        <td>{{ file.original_name }}</td>
+        <td>{{ file.size|filesizeformat }}</td>
+        <td>{{ file.content_type|default:"-" }}</td>
+        <td>
+          {% if file.file %}
+            <a href="{{ file.file.url }}" download>{% trans "Download" %}</a>
+          {% else %}
+            -
+          {% endif %}
+        </td>
+      </tr>
+    {% empty %}
+      <tr>
+        <td colspan="4">{% trans "Keine Dateien vorhanden." %}</td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}
