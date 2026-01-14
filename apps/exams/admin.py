@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.db.models import F
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, render
 from django.urls import path, reverse
 from django.utils import timezone
 from django.utils.html import format_html
@@ -77,17 +77,17 @@ class UploadFileInline(admin.TabularInline):
 
 @admin.register(UploadBatch)
 class UploadBatchAdmin(admin.ModelAdmin):
-    list_display = ("id", "status", "type_option", "subject_option", "teacher", "year_option", "program_option", "created_at", "file_count", "download_count")
+    list_display = ("status", "type_option", "subject_option", "teacher", "year_option", "program_option", "created_at", "file_count")
     list_filter = ("status", "type_option", "subject_option", "teacher", "year_option", "program_option", "created_at")
     search_fields = ("teacher__name", "subject_option__label", "files__original_name")
     date_hierarchy = "created_at"
     ordering = ("-created_at",)
     actions = (approve_batches, reject_batches)
-    readonly_fields = ("zip_download_link", "review_notice", "created_at", "download_count")
+    readonly_fields = ("zip_actions", "review_notice", "created_at", "download_count")
     inlines = (UploadFileInline,)
     list_select_related = ("type_option", "subject_option", "teacher", "year_option", "program_option")
     fieldsets = (
-        ("Review", {"fields": ("zip_download_link", "status", "review_notice")}),
+        ("Review", {"fields": ("zip_actions", "status", "review_notice")}),
         (
             "Metadata",
             {"fields": ("type_option", "subject_option", "teacher", "year_option", "program_option", "created_at", "download_count")},
@@ -102,6 +102,11 @@ class UploadBatchAdmin(admin.ModelAdmin):
                 self.admin_site.admin_view(self.download_zip),
                 name="exams_uploadbatch_zip",
             ),
+            path(
+                "<int:batch_id>/zip-preview/",
+                self.admin_site.admin_view(self.zip_preview),
+                name="exams_uploadbatch_zip_preview",
+            ),
         ]
         return custom_urls + urls
 
@@ -109,10 +114,16 @@ class UploadBatchAdmin(admin.ModelAdmin):
     def file_count(self, obj):
         return obj.files.count()
 
-    @admin.display(description="ZIP herunterladen")
-    def zip_download_link(self, obj):
-        url = reverse("admin:exams_uploadbatch_zip", args=[obj.pk])
-        return format_html('<a class="button" href="{}">ZIP herunterladen</a>', url)
+    @admin.display(description="ZIP Aktionen")
+    def zip_actions(self, obj):
+        download_url = reverse("admin:exams_uploadbatch_zip", args=[obj.pk])
+        preview_url = reverse("admin:exams_uploadbatch_zip_preview", args=[obj.pk])
+        return format_html(
+            '<a class="button" href="{}">ZIP herunterladen</a> '
+            '<a class="button" href="{}">ZIP ansehen</a>',
+            download_url,
+            preview_url,
+        )
 
     @admin.display(description="Sicherheitshinweis")
     def review_notice(self, obj):
@@ -129,13 +140,17 @@ class UploadBatchAdmin(admin.ModelAdmin):
             f"batch-{batch_id}.zip",
         )
 
+    def zip_preview(self, request, batch_id):
+        batch = get_object_or_404(UploadBatch, pk=batch_id)
+        files = batch.files.all().order_by("created_at", "id")
+        context = {
+            **self.admin_site.each_context(request),
+            "title": "ZIP ansehen",
+            "batch": batch,
+            "files": files,
+        }
+        return render(request, "admin/exams/uploadbatch/zip_preview.html", context)
+
     def get_search_results(self, request, queryset, search_term):
         queryset, use_distinct = super().get_search_results(request, queryset, search_term)
         return queryset, True
-
-
-@admin.register(UploadFile)
-class UploadFileAdmin(admin.ModelAdmin):
-    list_display = ("original_name", "batch", "content_type", "category", "subcategory", "size", "created_at")
-    list_filter = ("content_type", "category", "subcategory", "created_at")
-    search_fields = ("original_name",)
