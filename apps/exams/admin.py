@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.db.models import F
 from django.shortcuts import get_object_or_404
 from django.urls import path, reverse
 from django.utils import timezone
@@ -60,7 +61,7 @@ class UploadFileInline(admin.TabularInline):
 
 @admin.register(UploadBatch)
 class UploadBatchAdmin(admin.ModelAdmin):
-    list_display = ("id", "created_at", "status", "type_option", "year_option", "subject_option", "teacher", "program_option", "file_count")
+    list_display = ("id", "created_at", "status", "type_option", "year_option", "subject_option", "teacher", "program_option", "download_count", "file_count")
     list_filter = ("status", "content_type", "type_option", "year_option", "subject_option", "program_option", "teacher", "created_at")
     search_fields = ("id", "context")
     actions = (approve_batches, reject_batches)
@@ -89,6 +90,7 @@ class UploadBatchAdmin(admin.ModelAdmin):
 
     def download_zip(self, request, batch_id):
         batch = get_object_or_404(UploadBatch, pk=batch_id)
+        UploadBatch.objects.filter(pk=batch_id).update(download_count=F("download_count") + 1)
         return build_zip_response(
             batch.files.all().order_by("created_at", "id").iterator(),
             f"batch-{batch_id}.zip",

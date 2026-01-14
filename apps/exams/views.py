@@ -160,9 +160,12 @@ def _sanitize_zip_name(filename, used_names):
 
 
 def _iter_file_chunks(file_field):
-    with file_field.open("rb") as file_handle:
-        for chunk in file_handle.chunks():
-            yield chunk
+    try:
+        with file_field.open("rb") as file_handle:
+            for chunk in file_handle.chunks():
+                yield chunk
+    except (FileNotFoundError, OSError):
+        return
 
 
 def build_zip_response(file_items, filename):
@@ -171,12 +174,12 @@ def build_zip_response(file_items, filename):
     for index, upload_file in enumerate(file_items, start=1):
         if not upload_file.file:
             continue
+        storage = upload_file.file.storage
+        if not storage.exists(upload_file.file.name):
+            continue
         sanitized = _sanitize_zip_name(upload_file.original_name, used_names)
         name = f"{index:02d}_{sanitized}"
-        try:
-            archive.write_iter(name, _iter_file_chunks(upload_file.file))
-        except (FileNotFoundError, OSError):
-            continue
+        archive.write_iter(name, _iter_file_chunks(upload_file.file))
     response = StreamingHttpResponse(archive, content_type="application/zip")
     response["Content-Disposition"] = f'attachment; filename="{filename}"'
     response["X-Content-Type-Options"] = "nosniff"
@@ -259,6 +262,7 @@ def download_upload_batch(request, batch_id):
     batch = get_object_or_404(UploadBatch, pk=batch_id)
     if not _has_batch_access(request, batch):
         return JsonResponse({"error": "Unauthorized."}, status=403)
+    UploadBatch.objects.filter(pk=batch_id).update(download_count=F("download_count") + 1)
     return build_zip_response(
         batch.files.all().order_by("created_at", "id").iterator(),
         f"batch-{batch_id}.zip",
