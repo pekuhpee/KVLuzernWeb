@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import zipfile
 from pathlib import Path
 
 from django.db.models import F
@@ -183,7 +184,7 @@ def _iter_storage_chunks(file_name):
 
 def build_zip_response(file_items, filename):
     used_paths = set()
-    archive = zipstream.ZipFile(mode="w", compression=zipstream.ZIP_DEFLATED)
+    archive = zipstream.ZipFile(compression=zipfile.ZIP_DEFLATED)
     added_files = 0
     for upload_file in file_items:
         if not upload_file.file or not upload_file.file.name:
