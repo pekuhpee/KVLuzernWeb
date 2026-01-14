@@ -48,8 +48,18 @@ class SubCategoryAdmin(admin.ModelAdmin):
     ordering = ("category", "sort_order", "name")
 
 
-admin.site.register(MetaCategory)
-admin.site.register(MetaOption)
+@admin.register(MetaCategory)
+class MetaCategoryAdmin(admin.ModelAdmin):
+    list_display = ("key", "label", "sort_order", "is_active")
+    list_filter = ("is_active",)
+    ordering = ("sort_order", "label")
+
+
+@admin.register(MetaOption)
+class MetaOptionAdmin(admin.ModelAdmin):
+    list_display = ("category", "label", "value_key", "sort_order", "is_active")
+    list_filter = ("category", "is_active")
+    ordering = ("category", "sort_order", "label")
 
 
 class UploadFileInline(admin.TabularInline):

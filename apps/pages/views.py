@@ -35,7 +35,7 @@ def pruefungen(request):
   if year:
     batches = batches.filter(year_option__value_key=year)
   if content_type:
-    batches = batches.filter(content_type=content_type)
+    batches = batches.filter(type_option__value_key=content_type)
   if subject:
     batches = batches.filter(subject_option__value_key=subject)
   if teacher:
