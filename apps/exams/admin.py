@@ -55,18 +55,34 @@ admin.site.register(MetaOption)
 class UploadFileInline(admin.TabularInline):
     model = UploadFile
     extra = 0
-    fields = ("original_name", "size", "mime", "created_at")
+    fields = ("original_name", "size", "content_type", "file_link")
     readonly_fields = fields
+
+    @admin.display(description="Datei")
+    def file_link(self, obj):
+        if not obj.file:
+            return "-"
+        return format_html('<a href="{}" download>Download</a>', obj.file.url)
 
 
 @admin.register(UploadBatch)
 class UploadBatchAdmin(admin.ModelAdmin):
-    list_display = ("id", "created_at", "status", "type_option", "year_option", "subject_option", "teacher", "program_option", "download_count", "file_count")
-    list_filter = ("status", "content_type", "type_option", "year_option", "subject_option", "program_option", "teacher", "created_at")
-    search_fields = ("id", "context")
+    list_display = ("id", "status", "type_option", "subject_option", "teacher", "year_option", "program_option", "created_at", "file_count", "download_count")
+    list_filter = ("status", "type_option", "subject_option", "teacher", "year_option", "program_option", "created_at")
+    search_fields = ("teacher__name", "subject_option__label", "files__original_name")
+    date_hierarchy = "created_at"
+    ordering = ("-created_at",)
     actions = (approve_batches, reject_batches)
-    readonly_fields = ("zip_download_link",)
+    readonly_fields = ("zip_download_link", "review_notice", "created_at", "download_count")
     inlines = (UploadFileInline,)
+    list_select_related = ("type_option", "subject_option", "teacher", "year_option", "program_option")
+    fieldsets = (
+        ("Review", {"fields": ("zip_download_link", "status", "review_notice")}),
+        (
+            "Metadata",
+            {"fields": ("type_option", "subject_option", "teacher", "year_option", "program_option", "created_at", "download_count")},
+        ),
+    )
 
     def get_urls(self):
         urls = super().get_urls()
@@ -88,6 +104,13 @@ class UploadBatchAdmin(admin.ModelAdmin):
         url = reverse("admin:exams_uploadbatch_zip", args=[obj.pk])
         return format_html('<a class="button" href="{}">ZIP herunterladen</a>', url)
 
+    @admin.display(description="Sicherheitshinweis")
+    def review_notice(self, obj):
+        return format_html(
+            "<strong>Hinweis:</strong> Dateien sind Benutzer-Uploads und sollten vor der Freigabe geprüft werden. "
+            "Downloads werden als Anhang bereitgestellt."
+        )
+
     def download_zip(self, request, batch_id):
         batch = get_object_or_404(UploadBatch, pk=batch_id)
         UploadBatch.objects.filter(pk=batch_id).update(download_count=F("download_count") + 1)
@@ -95,6 +118,10 @@ class UploadBatchAdmin(admin.ModelAdmin):
             batch.files.all().order_by("created_at", "id").iterator(),
             f"batch-{batch_id}.zip",
         )
+
+    def get_search_results(self, request, queryset, search_term):
+        queryset, use_distinct = super().get_search_results(request, queryset, search_term)
+        return queryset, True
 
 
 @admin.register(UploadFile)
