@@ -29,6 +29,7 @@ def pruefungen(request):
   subject = request.GET.get("subject")
   teacher = request.GET.get("teacher")
   program = request.GET.get("program")
+  sort = request.GET.get("sort", "newest")
 
   batches = approved_batches
   if year:
@@ -42,7 +43,12 @@ def pruefungen(request):
   if program:
     batches = batches.filter(program_option__value_key=program)
 
-  batches = batches.order_by("-created_at")
+  sort_mapping = {
+    "newest": ("-created_at",),
+    "downloads": ("-download_count", "-created_at"),
+  }
+  ordering = sort_mapping.get(sort, sort_mapping["newest"])
+  batches = batches.order_by(*ordering)
 
   meta_labels = {category.key: category.label for category in MetaCategory.objects.filter(is_active=True).order_by("sort_order", "label")}
 
@@ -64,6 +70,7 @@ def pruefungen(request):
     "selected_subject": subject or "",
     "selected_teacher": teacher or "",
     "selected_program": program or "",
+    "selected_sort": sort if sort in sort_mapping else "newest",
     "meta_labels": meta_labels,
   }
   return render(request, "pages/pruefungen.html", context)

@@ -9,7 +9,6 @@
       </div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;">
         <a href="{% url 'exams:upload' %}" class="kv-btn kv-btn-primary">Hochladen</a>
-        <a href="{% url 'exams:download_filtered_zip' %}{% if request.GET.urlencode %}?{{ request.GET.urlencode }}{% endif %}" class="kv-btn kv-btn-secondary">Als ZIP herunterladen</a>
       </div>
     </div>
 
@@ -62,6 +61,13 @@
             {% endfor %}
           </select>
         </div>
+        <div class="kv-field">
+          <label for="sort">Sortierung</label>
+          <select id="sort" name="sort">
+            <option value="newest" {% if selected_sort == "newest" %}selected{% endif %}>Neueste zuerst</option>
+            <option value="downloads" {% if selected_sort == "downloads" %}selected{% endif %}>Meiste Downloads</option>
+          </select>
+        </div>
         <div class="kv-field" style="align-self: end;">
           <button type="submit" class="kv-btn kv-btn-primary" style="width: 100%;">Filtern</button>
         </div>
@@ -73,38 +79,33 @@
         <table class="kv-table">
           <thead>
             <tr>
-              <th>Einreichung</th>
               <th>Typ</th>
               <th>Fach</th>
               <th>Lehrperson</th>
               <th>Jahr</th>
               <th>Programm</th>
-              <th>Dateien</th>
+              <th>Downloads</th>
+              <th>ZIP</th>
+              <th>Upload-Datum</th>
             </tr>
           </thead>
           <tbody>
             {% for batch in batches %}
               <tr>
-                <td><strong>Einreichung #{{ batch.id }}</strong></td>
                 <td>{{ batch.type_option.label|default:batch.get_content_type_display }}</td>
                 <td>{{ batch.subject_option.label|default:"-" }}</td>
                 <td>{{ batch.teacher.name|default:"-" }}</td>
                 <td>{{ batch.year_option.label|default:"-" }}</td>
                 <td>{{ batch.program_option.label|default:"-" }}</td>
+                <td>{{ batch.download_count }}</td>
                 <td>
-                  <div class="kv-stack" style="gap:6px;">
-                    <a class="kv-btn kv-btn-secondary" href="{% url 'exams:download_upload_batch' batch.id %}">Als ZIP herunterladen</a>
-                    {% for file in batch.files.all %}
-                      <a class="kv-link-action" href="{% url 'exams:download_upload_file' file.id %}">{{ file.original_name }}</a>
-                    {% empty %}
-                      <span class="kv-muted">Keine Dateien.</span>
-                    {% endfor %}
-                  </div>
+                  <a class="kv-btn kv-btn-secondary" href="{% url 'exams:download_upload_batch' batch.id %}">Als ZIP herunterladen</a>
                 </td>
+                <td>{{ batch.created_at|date:"d.m.Y" }}</td>
               </tr>
             {% empty %}
               <tr>
-                <td colspan="7" class="kv-muted" style="text-align: center; padding: 20px;">Keine freigegebenen Inhalte gefunden.</td>
+                <td colspan="8" class="kv-muted" style="text-align: center; padding: 20px;">Keine freigegebenen Inhalte gefunden.</td>
               </tr>
             {% endfor %}
           </tbody>
