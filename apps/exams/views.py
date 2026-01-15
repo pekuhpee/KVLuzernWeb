@@ -154,13 +154,15 @@ def _iter_storage_chunks(file_name):
     try:
         file_handle = default_storage.open(file_name, "rb")
     except (FileNotFoundError, OSError, ValueError):
-        logger.warning("Failed to open file for ZIP: %s", file_name)
+        logger.exception("Storage open/read failed for %s", file_name)
         return None
     if hasattr(file_handle, "chunks"):
         def generator():
             try:
                 for chunk in file_handle.chunks():
                     yield chunk
+            except Exception:
+                logger.exception("Storage open/read failed for %s", file_name)
             finally:
                 try:
                     file_handle.close()
@@ -174,6 +176,8 @@ def _iter_storage_chunks(file_name):
                 if not chunk:
                     break
                 yield chunk
+        except Exception:
+            logger.exception("Storage open/read failed for %s", file_name)
         finally:
             try:
                 file_handle.close()
@@ -182,14 +186,27 @@ def _iter_storage_chunks(file_name):
     return generator()
 
 
+def _make_zipstream():
+    zip_cls = getattr(zipstream, "ZipFile", None) or getattr(zipstream, "ZipStream", None)
+    if zip_cls is None:
+        raise RuntimeError("zipstream module missing ZipFile/ZipStream; check installed package")
+    compression = getattr(zipstream, "ZIP_DEFLATED", zipfile.ZIP_DEFLATED)
+    try:
+        return zip_cls(mode="w", compression=compression)
+    except TypeError:
+        return zip_cls(compression=compression)
+
+
 def build_zip_response(file_items, filename):
     used_paths = set()
-    archive = zipstream.ZipFile(compression=zipfile.ZIP_DEFLATED)
+    try:
+        archive = _make_zipstream()
+    except Exception as exc:
+        logger.exception("ZIP init failed")
+        raise Http404("Keine Dateien verfügbar") from exc
     added_files = 0
     for upload_file in file_items:
         if not upload_file.file or not upload_file.file.name:
-            continue
-        if not default_storage.exists(upload_file.file.name):
             continue
         sanitized = sanitize_filename(upload_file.original_name or upload_file.file.name)
         prefix = f"submission_{upload_file.batch_id}"
@@ -197,10 +214,17 @@ def build_zip_response(file_items, filename):
         chunk_iter = _iter_storage_chunks(upload_file.file.name)
         if not chunk_iter:
             continue
-        archive.write_iter(zip_path, chunk_iter)
-        added_files += 1
+        try:
+            archive.write_iter(zip_path, chunk_iter)
+            added_files += 1
+        except Exception:
+            logger.exception(
+                "ZIP add failed for storage_name=%s zip_path=%s",
+                upload_file.file.name,
+                zip_path,
+            )
     if added_files == 0:
-        raise Http404("No files available for download.")
+        raise Http404("Keine Dateien verfügbar")
     safe_filename = sanitize_filename(filename) or "download.zip"
     response = StreamingHttpResponse(archive, content_type="application/zip")
     response["Content-Disposition"] = f'attachment; filename="{safe_filename}"'
